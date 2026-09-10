@@ -16,6 +16,21 @@ window.KiaAuth = {
     }
   },
 
+  getDeviceId(){
+    let value = localStorage.getItem('kia_device_id');
+    if(value) return value;
+
+    if(window.crypto?.randomUUID){
+      value = crypto.randomUUID();
+    }else{
+      value = 'dev_' + Date.now().toString(36) + '_' +
+        Math.random().toString(36).slice(2,14);
+    }
+
+    localStorage.setItem('kia_device_id', value);
+    return value;
+  },
+
   getToken(){
     this.migrateLegacySession();
     return localStorage.getItem('kia_session_token') || '';
@@ -42,33 +57,56 @@ window.KiaAuth = {
     localStorage.removeItem('kia_user');
     sessionStorage.removeItem('kia_session_token');
     sessionStorage.removeItem('kia_user');
+
+    // Device ID sengaja TIDAK dihapus.
+    // Browser/perangkat yang sama tetap memiliki identitas device stabil.
   },
 
   async request(path, options={}){
     const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
-    if(!base || base.includes('PASTE_')) throw new Error('Backend URL belum dikonfigurasi');
+    if(!base || base.includes('PASTE_')) {
+      throw new Error('Backend URL belum dikonfigurasi');
+    }
 
     const {timeout=15000, ...fetchOptions} = options;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    const headers={'Content-Type':'application/json', ...(fetchOptions.headers||{})};
+    const headers={
+      'Content-Type':'application/json',
+      'X-KIA-Device-ID':this.getDeviceId(),
+      ...(fetchOptions.headers||{})
+    };
+
     const token=this.getToken();
-    if(token && !headers.Authorization) headers.Authorization='Bearer '+token;
+    if(token && !headers.Authorization) {
+      headers.Authorization='Bearer '+token;
+    }
 
     try{
-      const res=await fetch(base+path,{...fetchOptions,headers,signal:controller.signal});
-      const body=await res.json().catch(()=>({success:false,message:'Respons backend tidak valid'}));
+      const res=await fetch(base+path,{
+        ...fetchOptions,
+        headers,
+        signal:controller.signal
+      });
+
+      const body=await res.json().catch(()=>({
+        success:false,
+        message:'Respons backend tidak valid'
+      }));
 
       if(!res.ok || !body.success){
         const err = new Error(body.message||body.code||'REQUEST_FAILED');
         err.status = res.status;
         throw err;
       }
+
       return body;
     }catch(err){
       if(err?.name === 'AbortError'){
-        const timeoutError = new Error('Koneksi ke server terlalu lama. Silakan coba lagi.');
+        const timeoutError = new Error(
+          'Server membutuhkan waktu lebih lama. Silakan coba lagi.'
+        );
         timeoutError.code = 'REQUEST_TIMEOUT';
         throw timeoutError;
       }
@@ -81,30 +119,46 @@ window.KiaAuth = {
   register(payload){
     return this.request('/api/auth/register',{
       method:'POST',
-      body:JSON.stringify(payload)
+      body:JSON.stringify(payload),
+      timeout:60000
     });
   },
 
   login(payload){
     return this.request('/api/auth/login',{
       method:'POST',
-      body:JSON.stringify(payload)
+      body:JSON.stringify(payload),
+      timeout:35000
     });
   },
 
   me(){
-    return this.request('/api/auth/me');
+    return this.request('/api/auth/me',{
+      timeout:12000
+    });
+  },
+
+  async warmup(){
+    const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
+    if(!base) return;
+    try{
+      await fetch(base+'/health',{
+        method:'GET',
+        cache:'no-store',
+        headers:{'X-KIA-Device-ID':this.getDeviceId()}
+      });
+    }catch(_){}
   },
 
   async logout(){
     const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
     const token=this.getToken();
 
-    // Hilangkan state lokal SEBELUM menunggu Render/Apps Script.
-    // Landing page tidak akan lagi sempat menampilkan "Halo" setelah logout.
     this.clear();
 
-    if(!token || !base) return {success:true,data:{logged_out:true,local_only:true}};
+    if(!token || !base) {
+      return {success:true,data:{logged_out:true,local_only:true}};
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
@@ -114,15 +168,14 @@ window.KiaAuth = {
         method:'POST',
         headers:{
           'Content-Type':'application/json',
-          'Authorization':'Bearer '+token
+          'Authorization':'Bearer '+token,
+          'X-KIA-Device-ID':this.getDeviceId()
         },
         signal:controller.signal
       });
 
-      const body = await res.json().catch(()=>({success:res.ok}));
-      return body;
-    }catch(err){
-      // Logout lokal tetap final walaupun server sedang lambat/offline.
+      return await res.json().catch(()=>({success:res.ok}));
+    }catch(_){
       return {success:true,data:{logged_out:true,local_only:true}};
     }finally{
       clearTimeout(timer);
@@ -131,3 +184,4 @@ window.KiaAuth = {
 };
 
 window.KiaAuth.migrateLegacySession();
+window.KiaAuth.getDeviceId();

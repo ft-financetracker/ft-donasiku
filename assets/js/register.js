@@ -1,3 +1,5 @@
+KiaAuth.warmup();
+
 const form=document.querySelector('#registerForm');
 const orgFields=document.querySelector('[data-org-fields]');
 const statusEl=document.querySelector('[data-form-status]');

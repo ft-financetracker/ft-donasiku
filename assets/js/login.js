@@ -1,3 +1,5 @@
+KiaAuth.warmup();
+
 const form=document.querySelector('#loginForm');
 const statusEl=document.querySelector('[data-form-status]');
 
