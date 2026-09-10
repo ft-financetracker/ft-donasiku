@@ -1,5 +1,8 @@
-# KIA Server-Side Backend
+# KIA Backend v0.3.0
 
-Reserved for authentication, business logic, DOKU API/webhook, withdrawals, and protected Spreadsheet writes.
+Node.js / Express backend for KIA — Donasi Online.
 
-Important: GitHub stores the source code; GitHub Pages does not execute this server directory. A server-side runtime must be selected/configured before DOKU credentials are added. Secrets belong in environment variables, never public frontend files.
+Auth engine remains based on stable v0.2.5 per-device session behavior.
+v0.3.0 adds verification, fundraiser program workflow, public program data, admin review, and Hero CMS endpoints.
+
+Secrets remain server-side via Render environment variables.
