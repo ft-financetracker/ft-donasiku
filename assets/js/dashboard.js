@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const status=document.querySelector('[data-dashboard-status]');
   const home=document.querySelector('[data-dashboard-home]');
   const fundraise=document.querySelector('[data-dashboard-fundraise]');
-  let currentUser=null;
+  let currentUser=KiaAuth.getUser();
 
   function renderRoute(){
     const isFundraise = location.hash === '#fundraise';
@@ -11,51 +11,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.querySelectorAll('[data-dashboard-route]').forEach(link=>{
       const route=link.dataset.dashboardRoute;
-      link.classList.toggle('btn-primary',
+      const active =
         (route==='home' && !isFundraise) ||
-        (route==='fundraise' && isFundraise)
-      );
-      link.classList.toggle('btn-ghost',
-        !((route==='home' && !isFundraise) ||
-        (route==='fundraise' && isFundraise))
-      );
+        (route==='fundraise' && isFundraise);
+
+      link.classList.toggle('btn-primary',active);
+      link.classList.toggle('btn-ghost',!active);
     });
   }
 
-  KiaUI.showLoading({
-    title:'Menyiapkan dashboard',
-    message:'Memeriksa sesi dan memuat profil Anda…'
-  });
-
-  try{
-    const r=await KiaAuth.me();
-    currentUser=r.data.user;
-    localStorage.setItem('kia_user',JSON.stringify(currentUser));
+  function renderUser(user){
+    if(!user) return;
 
     document.querySelectorAll('[data-user-name]').forEach(el=>{
-      el.textContent=currentUser.full_name;
+      el.textContent=user.full_name || 'Pengguna';
     });
+
     document.querySelectorAll('[data-account-type]').forEach(el=>{
-      el.textContent=currentUser.account_type==='ORGANIZATION'
+      el.textContent=user.account_type==='ORGANIZATION'
         ? 'Yayasan / Organisasi'
         : 'Perorangan';
     });
 
     const fundraiseCopy=document.querySelector('[data-fundraise-copy]');
     if(fundraiseCopy){
-      fundraiseCopy.textContent=currentUser.account_type==='ORGANIZATION'
+      fundraiseCopy.textContent=user.account_type==='ORGANIZATION'
         ? 'Akun yayasan Anda sudah aktif. Anda tidak perlu daftar ulang. Tahap berikutnya adalah verifikasi organisasi dan pembuatan program donasi.'
         : 'Akun perorangan Anda sudah aktif. Anda tidak perlu daftar ulang. Tahap berikutnya adalah verifikasi identitas sebelum program dapat diajukan.';
     }
+  }
 
-    if(status) status.textContent='Sesi aktif';
-    renderRoute();
-    KiaUI.hideLoading();
-  }catch(err){
-    KiaAuth.clear();
-    KiaUI.hideLoading();
+  // Tidak ada token = memang belum login.
+  if(!KiaAuth.getToken()){
     location.replace('./login.html');
     return;
+  }
+
+  // FAST FIRST PAINT:
+  // gunakan user cache untuk menampilkan dashboard seketika.
+  renderRoute();
+  if(currentUser){
+    renderUser(currentUser);
+    if(status) status.textContent='Sesi aktif';
+  }else{
+    if(status) status.textContent='Memeriksa sesi…';
+  }
+
+  // VALIDASI DI BELAKANG.
+  // Hanya 401 yang boleh dianggap session habis.
+  try{
+    const r=await KiaAuth.me();
+    currentUser=r.data.user;
+    localStorage.setItem('kia_user',JSON.stringify(currentUser));
+    renderUser(currentUser);
+    if(status) status.textContent='Sesi aktif';
+  }catch(err){
+    if(err.status===401){
+      KiaAuth.clear();
+      location.replace('./login.html?reason=session_expired');
+      return;
+    }
+
+    // Render/Apps Script lambat, timeout, offline, atau 5xx:
+    // JANGAN logout user. Cache tetap dipakai.
+    if(status){
+      status.textContent=currentUser
+        ? 'Sesi tersimpan · koneksi sedang diperbarui'
+        : 'Koneksi sedang tertunda';
+    }
   }
 
   window.addEventListener('hashchange',renderRoute);
@@ -82,8 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       message:'Kembali ke halaman utama…'
     });
 
-    // localStorage sudah dibersihkan sebelum request logout,
-    // sehingga landing page langsung tampil sebagai guest.
-    setTimeout(()=>location.replace('./'),280);
+    setTimeout(()=>location.replace('./'),220);
   });
 });
