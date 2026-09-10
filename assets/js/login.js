@@ -1,0 +1,2 @@
+const form=document.querySelector('#loginForm'), statusEl=document.querySelector('[data-form-status]');
+form.addEventListener('submit',async e=>{e.preventDefault();statusEl.textContent='Memeriksa akun…';const payload=Object.fromEntries(new FormData(form).entries());try{const r=await KiaAuth.login(payload);KiaAuth.setSession(r.data);location.href='./app.html'}catch(err){statusEl.textContent=err.message}});

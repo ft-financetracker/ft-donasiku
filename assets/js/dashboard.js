@@ -1,0 +1,2 @@
+(async()=>{const status=document.querySelector('[data-dashboard-status]');try{const r=await KiaAuth.me();document.querySelector('[data-user-name]').textContent=r.data.user.full_name;document.querySelector('[data-account-type]').textContent=r.data.user.account_type==='ORGANIZATION'?'Yayasan / Organisasi':'Perorangan';status.textContent='Sesi aktif'}catch(e){location.replace('./login.html')}})();
+document.querySelector('[data-logout]').addEventListener('click',async()=>{await KiaAuth.logout().catch(()=>{});location.replace('./login.html')});
