@@ -1,5 +1,98 @@
-const CACHE='kia-v0.2.1';
-const SHELL=['./','./index.html','./login.html','./register.html','./app.html','./offline.html','./manifest.json','./assets/css/tokens.css','./assets/css/components.css','./assets/css/public.css','./assets/css/auth.css','./assets/js/config.js','./assets/js/api.js','./assets/js/app.js','./assets/js/auth.js','./assets/js/public-auth.js','./assets/js/login.js','./assets/js/register.js','./assets/js/dashboard.js','./assets/js/pwa.js','./icons/icon-192.png','./icons/icon-512.png'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin)return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./offline.html'))));return}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(net=>{if(net.ok){const c=net.clone();caches.open(CACHE).then(x=>x.put(e.request,c))}return net})))});
+const CACHE='kia-v0.2.2';
+
+const SHELL=[
+  './',
+  './index.html',
+  './login.html',
+  './register.html',
+  './app.html',
+  './offline.html',
+  './manifest.json',
+  './assets/css/tokens.css',
+  './assets/css/components.css',
+  './assets/css/public.css',
+  './assets/css/auth.css',
+  './assets/css/ui.css',
+  './assets/js/config.js',
+  './assets/js/api.js',
+  './assets/js/app.js',
+  './assets/js/auth.js',
+  './assets/js/public-auth.js',
+  './assets/js/auth-page.js',
+  './assets/js/ui.js',
+  './assets/js/login.js',
+  './assets/js/register.js',
+  './assets/js/dashboard.js',
+  './assets/js/pwa.js',
+  './icons/kia-symbol.png',
+  './icons/favicon-32.png',
+  './icons/favicon-48.png',
+  './icons/favicon.ico',
+  './icons/apple-touch-icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache=>cache.addAll(SHELL))
+      .then(()=>self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(
+        keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))
+      ))
+      .then(()=>self.clients.claim())
+  );
+});
+
+async function networkFirst(request, fallback){
+  try{
+    const response=await fetch(request);
+    if(response && response.ok){
+      const copy=response.clone();
+      caches.open(CACHE).then(cache=>cache.put(request,copy));
+    }
+    return response;
+  }catch{
+    return (await caches.match(request)) ||
+      (fallback ? await caches.match(fallback) : undefined);
+  }
+}
+
+async function cacheFirst(request){
+  const cached=await caches.match(request);
+  if(cached) return cached;
+  const response=await fetch(request);
+  if(response && response.ok){
+    const copy=response.clone();
+    caches.open(CACHE).then(cache=>cache.put(request,copy));
+  }
+  return response;
+}
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET') return;
+
+  const url=new URL(event.request.url);
+
+  // DOKU/Render/Apps Script/API tidak pernah dicache oleh PWA.
+  if(url.origin!==self.location.origin) return;
+
+  if(event.request.mode==='navigate'){
+    event.respondWith(networkFirst(event.request,'./offline.html'));
+    return;
+  }
+
+  if(/\.(?:js|css|json)$/.test(url.pathname)){
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(event.request));
+});

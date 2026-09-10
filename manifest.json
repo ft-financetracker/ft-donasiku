@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "KIA — Kebaikan dalam Aksi",
+  "name": "KIA — Donasi Online",
   "short_name": "KIA",
-  "description": "Platform donasi untuk perorangan dan yayasan",
+  "description": "Platform donasi transparan untuk perorangan dan yayasan. Founded by Finance Tracker.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

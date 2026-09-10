@@ -48,25 +48,86 @@ window.KiaAuth = {
     const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
     if(!base || base.includes('PASTE_')) throw new Error('Backend URL belum dikonfigurasi');
 
-    const headers={'Content-Type':'application/json', ...(options.headers||{})};
+    const {timeout=15000, ...fetchOptions} = options;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    const headers={'Content-Type':'application/json', ...(fetchOptions.headers||{})};
     const token=this.getToken();
-    if(token) headers.Authorization='Bearer '+token;
+    if(token && !headers.Authorization) headers.Authorization='Bearer '+token;
 
-    const res=await fetch(base+path,{...options,headers});
-    const body=await res.json().catch(()=>({success:false,message:'Respons backend tidak valid'}));
+    try{
+      const res=await fetch(base+path,{...fetchOptions,headers,signal:controller.signal});
+      const body=await res.json().catch(()=>({success:false,message:'Respons backend tidak valid'}));
 
-    if(!res.ok || !body.success){
-      const err = new Error(body.message||body.code||'REQUEST_FAILED');
-      err.status = res.status;
+      if(!res.ok || !body.success){
+        const err = new Error(body.message||body.code||'REQUEST_FAILED');
+        err.status = res.status;
+        throw err;
+      }
+      return body;
+    }catch(err){
+      if(err?.name === 'AbortError'){
+        const timeoutError = new Error('Koneksi ke server terlalu lama. Silakan coba lagi.');
+        timeoutError.code = 'REQUEST_TIMEOUT';
+        throw timeoutError;
+      }
       throw err;
+    }finally{
+      clearTimeout(timer);
     }
-    return body;
   },
 
-  register(payload){ return this.request('/api/auth/register',{method:'POST',body:JSON.stringify(payload)}); },
-  login(payload){ return this.request('/api/auth/login',{method:'POST',body:JSON.stringify(payload)}); },
-  me(){ return this.request('/api/auth/me'); },
-  logout(){ return this.request('/api/auth/logout',{method:'POST'}).finally(()=>this.clear()); }
+  register(payload){
+    return this.request('/api/auth/register',{
+      method:'POST',
+      body:JSON.stringify(payload)
+    });
+  },
+
+  login(payload){
+    return this.request('/api/auth/login',{
+      method:'POST',
+      body:JSON.stringify(payload)
+    });
+  },
+
+  me(){
+    return this.request('/api/auth/me');
+  },
+
+  async logout(){
+    const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
+    const token=this.getToken();
+
+    // Hilangkan state lokal SEBELUM menunggu Render/Apps Script.
+    // Landing page tidak akan lagi sempat menampilkan "Halo" setelah logout.
+    this.clear();
+
+    if(!token || !base) return {success:true,data:{logged_out:true,local_only:true}};
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+
+    try{
+      const res = await fetch(base+'/api/auth/logout',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+token
+        },
+        signal:controller.signal
+      });
+
+      const body = await res.json().catch(()=>({success:res.ok}));
+      return body;
+    }catch(err){
+      // Logout lokal tetap final walaupun server sedang lambat/offline.
+      return {success:true,data:{logged_out:true,local_only:true}};
+    }finally{
+      clearTimeout(timer);
+    }
+  }
 };
 
 window.KiaAuth.migrateLegacySession();
