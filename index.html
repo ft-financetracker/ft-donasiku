@@ -1,1 +1,90 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#176b52"><title>KIA — Donasi Online</title><link rel="manifest" href="./manifest.json"><link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png"><link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png"><link rel="shortcut icon" href="./icons/favicon.ico"><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"><link rel="stylesheet" href="./assets/css/tokens.css"><link rel="stylesheet" href="./assets/css/components.css"><link rel="stylesheet" href="./assets/css/public.css"><link rel="stylesheet" href="./assets/css/ui.css"></head><body><header><div class="container nav"><a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol.png" alt=""><span>KIA</span></a><nav class="navlinks"><a href="#program">Program</a><a href="#transparansi">Transparansi</a><span class="auth-nav is-resolving" data-auth-nav aria-busy="true"><span class="nav-skeleton" aria-hidden="true"></span></span></nav></div></header><main class="container"><section class="hero"><div><p class="muted">Platform donasi untuk perorangan & yayasan</p><h1>Kebaikan yang terukur. Dampak yang terlihat.</h1><p class="muted">Temukan program, berdonasi tanpa wajib login, atau buat akun untuk menyimpan riwayat donasi dan mengelola program penggalangan dana.</p><div class="hero-actions"><a class="btn btn-primary" href="#program">Mulai Berdonasi</a><a class="btn btn-ghost" href="./register.html?intent=fundraise" data-fundraise-link>Galang Dana</a></div><p class="muted" data-api-status>Memeriksa koneksi API…</p></div><div class="card hero-card"><h2>Transparansi sejak transaksi pertama</h2><p class="muted">Donasi, pembayaran, biaya provider, pencairan, dan settlement dicatat sebagai fakta keuangan yang berbeda.</p></div></section><section class="stats" id="transparansi"><div class="card stat"><strong>0</strong><span class="muted">Donasi tervalidasi</span></div><div class="card stat"><strong>0</strong><span class="muted">Program aktif</span></div><div class="card stat"><strong>0</strong><span class="muted">Dana tersalurkan</span></div></section><section id="program" style="padding-bottom:90px"><h2>Program Donasi</h2><div class="card" style="padding:28px"><strong>Belum ada program publik.</strong><p class="muted">Data program akan ditarik dari Spreadsheet melalui API setelah endpoint dikonfigurasi.</p></div></section></main><footer class="container kia-founder">KIA — Donasi Online · <strong>Founded by Finance Tracker</strong></footer><script src="./assets/js/config.js"></script><script src="./assets/js/ui.js"></script><script src="./assets/js/api.js"></script><script src="./assets/js/auth.js"></script><script src="./assets/js/public-auth.js"></script><script src="./assets/js/app.js"></script><script src="./assets/js/pwa.js"></script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#176b52">
+  <title>KIA — Donasi Online</title>
+  <link rel="manifest" href="./manifest-v030.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v030-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v030-48.png">
+  <link rel="shortcut icon" href="./icons/favicon-white-v030.ico">
+  <link rel="apple-touch-icon" href="./icons/kia-apple-v030-180.png">
+  <link rel="stylesheet" href="./assets/css/tokens.css">
+  <link rel="stylesheet" href="./assets/css/components.css">
+  <link rel="stylesheet" href="./assets/css/public-v030.css">
+  <link rel="stylesheet" href="./assets/css/ui.css">
+  <link rel="stylesheet" href="./assets/css/dashboard.css">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a>
+      <nav class="navlinks">
+        <a href="#program">Program</a>
+        <a href="#tentang">Tentang KIA</a>
+        <a href="#transparansi">Transparansi</a>
+        <span class="auth-nav is-resolving" data-auth-nav aria-busy="true"><span class="nav-skeleton" aria-hidden="true"></span></span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="muted">Platform donasi untuk perorangan & yayasan</p>
+        <h1 data-hero-title>Kebaikan yang terukur. Dampak yang terlihat.</h1>
+        <p class="muted" data-hero-subtitle>Temukan program, berdonasi tanpa wajib login, atau buat akun untuk menyimpan riwayat dan mengelola penggalangan dana.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#program" data-hero-cta>Mulai Berdonasi</a>
+          <a class="btn btn-ghost" href="./register.html?intent=fundraise" data-fundraise-link>Galang Dana</a>
+        </div>
+        <p class="muted mini" data-api-status>Memuat data publik…</p>
+      </div>
+      <div class="card hero-card" data-hero-card>
+        <div class="hero-card__inner">
+          <h2>Transparansi sejak transaksi pertama</h2>
+          <p class="muted">Donasi, pembayaran, biaya provider, pencairan, dan settlement diperlakukan sebagai fakta keuangan yang berbeda.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats" id="transparansi">
+      <div class="card stat"><strong data-stat-paid>Rp0</strong><span class="muted">Donasi tervalidasi</span></div>
+      <div class="card stat"><strong data-stat-programs>0</strong><span class="muted">Program aktif</span></div>
+      <div class="card stat"><strong data-stat-disbursed>Rp0</strong><span class="muted">Dana tersalurkan</span></div>
+    </section>
+
+    <section class="section-block" id="program">
+      <div class="section-title"><div><h2>Program Donasi</h2><p class="muted">Hanya program ACTIVE dan PUBLIC yang ditampilkan.</p></div></div>
+      <div class="program-grid" data-public-programs><div class="empty-state" style="grid-column:1/-1">Memuat program…</div></div>
+    </section>
+
+    <section class="section-block" id="tentang">
+      <div class="section-title"><div><h2>Tentang KIA</h2><p class="muted">Platform donasi dengan alur verifikasi, review program, dan pencatatan transaksi yang terstruktur.</p></div></div>
+      <div class="about-grid">
+        <div class="card about-card"><strong>Verifikasi</strong><p class="muted">Penggalang dana diverifikasi sebelum program dapat masuk review.</p></div>
+        <div class="card about-card"><strong>Review Program</strong><p class="muted">Program tidak langsung publik setelah akun dibuat.</p></div>
+        <div class="card about-card"><strong>Finance-ready</strong><p class="muted">Dibangun untuk terhubung dengan ekosistem Finance Tracker.</p></div>
+      </div>
+    </section>
+
+    <section class="card closing">
+      <h2>Ingin menggalang dana?</h2>
+      <p class="muted">Buat akun, lengkapi verifikasi, siapkan Draft Program, lalu kirim ke review KIA.</p>
+      <div class="hero-actions">
+        <a class="btn btn-ghost" href="./register.html?intent=fundraise" data-fundraise-link>Mulai Galang Dana</a>
+        <a class="btn btn-ghost" href="#program">Lihat Program</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container kia-founder">KIA — Donasi Online · <strong>Founded by Finance Tracker</strong></footer>
+  <script src="./assets/js/config.js"></script>
+  <script src="./assets/js/ui.js"></script>
+  <script src="./assets/js/auth.js"></script>
+  <script src="./assets/js/public-auth.js"></script>
+  <script src="./assets/js/public-v030.js"></script>
+  <script src="./assets/js/pwa.js"></script>
+</body>
+</html>

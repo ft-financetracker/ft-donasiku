@@ -149,3 +149,5 @@
   .kia-modal__actions .btn{width:100%}
   .dashboard-nav .btn{padding:0 13px}
 }
+
+.kia-toast{position:fixed;z-index:11000;left:50%;bottom:24px;transform:translateX(-50%);max-width:min(520px,calc(100% - 32px));padding:13px 16px;border-radius:13px;background:#17211d;color:#fff;box-shadow:0 15px 45px rgba(0,0,0,.18);font-size:13px;font-weight:700;text-align:center}.kia-toast[hidden]{display:none!important}.kia-toast[data-type="success"]{background:#176b52}.kia-toast[data-type="error"]{background:#9d352d}.kia-toast[data-type="warning"]{background:#86621c}.kia-brand-lockup img{object-fit:contain;border-radius:0;background:transparent}.kia-loading__logo{object-fit:contain;border-radius:0;background:transparent}

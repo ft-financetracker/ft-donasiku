@@ -1,12 +1,13 @@
 window.KiaUI = (() => {
   let slowTimer = null;
+  let toastTimer = null;
 
   function ensureUI(){
     if(!document.querySelector('[data-kia-loading]')){
       document.body.insertAdjacentHTML('beforeend', `
         <div class="kia-loading" data-kia-loading hidden aria-live="polite" aria-busy="true">
           <div class="kia-loading__card">
-            <img class="kia-loading__logo" src="./icons/kia-symbol.png" alt="">
+            <img class="kia-loading__logo" src="./icons/kia-symbol-v030.png" alt="">
             <div class="kia-spinner" aria-hidden="true"></div>
             <h2 class="kia-loading__title" data-kia-loading-title>Memproses…</h2>
             <p class="kia-loading__message" data-kia-loading-message>Mohon tunggu sebentar.</p>
@@ -28,6 +29,12 @@ window.KiaUI = (() => {
             </div>
           </div>
         </div>
+      `);
+    }
+
+    if(!document.querySelector('[data-kia-toast]')){
+      document.body.insertAdjacentHTML('beforeend', `
+        <div class="kia-toast" data-kia-toast hidden role="status" aria-live="polite"></div>
       `);
     }
   }
@@ -59,6 +66,16 @@ window.KiaUI = (() => {
     ensureUI();
     clearTimeout(slowTimer);
     document.querySelector('[data-kia-loading]').hidden = true;
+  }
+
+  function toast(message,{type='info',duration=3200}={}){
+    ensureUI();
+    const el=document.querySelector('[data-kia-toast]');
+    clearTimeout(toastTimer);
+    el.textContent=message;
+    el.dataset.type=type;
+    el.hidden=false;
+    toastTimer=setTimeout(()=>{el.hidden=true},duration);
   }
 
   function confirm({
@@ -101,5 +118,5 @@ window.KiaUI = (() => {
 
   document.addEventListener('DOMContentLoaded', ensureUI);
 
-  return {showLoading, setLoading, hideLoading, confirm};
+  return {showLoading, setLoading, hideLoading, confirm, toast};
 })();
