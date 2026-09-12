@@ -4,23 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#176b52">
+  <meta name="color-scheme" content="light dark">
   <title>KIA — Donasi Online</title>
-  <link rel="manifest" href="./manifest-v030.json">
-  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v030-32.png">
-  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v030-48.png">
-  <link rel="shortcut icon" href="./icons/favicon-white-v030.ico">
-  <link rel="apple-touch-icon" href="./icons/kia-apple-v030-180.png">
+  <link rel="manifest" href="./manifest-v031.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v031-32.png?v=031">
+  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v031-48.png?v=031">
+  <link rel="shortcut icon" href="./icons/favicon-white-v031.ico?v=031">
+  <link rel="apple-touch-icon" href="./icons/kia-apple-v031-180.png?v=031">
   <link rel="stylesheet" href="./assets/css/tokens.css">
   <link rel="stylesheet" href="./assets/css/components.css">
-  <link rel="stylesheet" href="./assets/css/public-v030.css">
+  <link rel="stylesheet" href="./assets/css/public-v031.css">
   <link rel="stylesheet" href="./assets/css/ui.css">
   <link rel="stylesheet" href="./assets/css/dashboard.css">
 </head>
-<body>
+<body class="has-mobile-nav">
   <header>
     <div class="container nav">
       <a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a>
-      <nav class="navlinks">
+      <nav class="navlinks" aria-label="Navigasi utama">
         <a href="#program">Program</a>
         <a href="#tentang">Tentang KIA</a>
         <a href="#transparansi">Transparansi</a>
@@ -29,23 +30,23 @@
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero">
-      <div>
-        <p class="muted">Platform donasi untuk perorangan & yayasan</p>
-        <h1 data-hero-title>Kebaikan yang terukur. Dampak yang terlihat.</h1>
-        <p class="muted" data-hero-subtitle>Temukan program, berdonasi tanpa wajib login, atau buat akun untuk menyimpan riwayat dan mengelola penggalangan dana.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#program" data-hero-cta>Mulai Berdonasi</a>
-          <a class="btn btn-ghost" href="./register.html?intent=fundraise" data-fundraise-link>Galang Dana</a>
+  <main class="container public-main">
+    <section class="hero-carousel" data-hero-carousel aria-roledescription="carousel" aria-label="Sorotan KIA">
+      <div class="hero-carousel__media" data-hero-image>
+        <div class="hero-carousel__shade"></div>
+        <div class="hero-carousel__content">
+          <p class="hero-eyebrow" data-hero-eyebrow>KIA — Donasi Online</p>
+          <h1 data-hero-title>Kecil di Tangan Kita, Besar untuk Mereka</h1>
+          <p data-hero-subtitle>Setiap kebaikan yang Anda berikan dapat menjadi harapan baru bagi banyak kehidupan.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary hero-cta" href="#program" data-hero-cta>Mulai Berdonasi</a>
+            <a class="btn hero-secondary" href="./register.html?intent=fundraise" data-fundraise-link>Galang Dana</a>
+          </div>
+          <p class="hero-api-status" data-api-status>Memuat data publik…</p>
         </div>
-        <p class="muted mini" data-api-status>Memuat data publik…</p>
-      </div>
-      <div class="card hero-card" data-hero-card>
-        <div class="hero-card__inner">
-          <h2>Transparansi sejak transaksi pertama</h2>
-          <p class="muted">Donasi, pembayaran, biaya provider, pencairan, dan settlement diperlakukan sebagai fakta keuangan yang berbeda.</p>
-        </div>
+        <button class="hero-arrow hero-arrow--prev" type="button" data-hero-prev aria-label="Hero sebelumnya">‹</button>
+        <button class="hero-arrow hero-arrow--next" type="button" data-hero-next aria-label="Hero berikutnya">›</button>
+        <div class="hero-dots" data-hero-dots aria-label="Pilih hero"></div>
       </div>
     </section>
 
@@ -80,11 +81,30 @@
   </main>
 
   <footer class="container kia-founder">KIA — Donasi Online · <strong>Founded by Finance Tracker</strong></footer>
+
+  <nav class="mobile-bottom-nav" aria-label="Navigasi mobile">
+    <a class="mobile-nav-item" href="./" data-mobile-nav="home" aria-label="Beranda">
+      <span class="mobile-nav-icon">⌂</span><span>Beranda</span>
+    </a>
+    <a class="mobile-nav-item" href="#program" data-mobile-nav="program" aria-label="Program">
+      <span class="mobile-nav-icon">▦</span><span>Program</span>
+    </a>
+    <a class="mobile-nav-item mobile-nav-cta" href="#program" aria-label="Donasi">
+      <span class="diamond-cta"><span class="diamond-glyph">◇</span></span><span>Donasi</span>
+    </a>
+    <a class="mobile-nav-item" href="#transparansi" data-mobile-nav="transparency" aria-label="Transparansi">
+      <span class="mobile-nav-icon">✓</span><span>Transparansi</span>
+    </a>
+    <a class="mobile-nav-item" href="./login.html" data-mobile-account aria-label="Akun">
+      <span class="mobile-nav-icon">○</span><span>Akun</span>
+    </a>
+  </nav>
+
   <script src="./assets/js/config.js"></script>
   <script src="./assets/js/ui.js"></script>
   <script src="./assets/js/auth.js"></script>
-  <script src="./assets/js/public-auth.js"></script>
-  <script src="./assets/js/public-v030.js"></script>
+  <script src="./assets/js/public-auth-v031.js"></script>
+  <script src="./assets/js/public-v031.js"></script>
   <script src="./assets/js/pwa.js"></script>
 </body>
 </html>
