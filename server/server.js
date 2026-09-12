@@ -64,20 +64,32 @@ function stableSessionId(userId,device){
 async function gas(action,payload={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
 
-  const r=await fetch(GAS_URL,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({
-      action,
-      gateway_secret:GATEWAY_SECRET,
-      ...payload
-    })
-  });
-
-  const out=await r.json();
-
-  if(!out.success) throw new Error(out.code||'GATEWAY_ERROR');
-  return out.data;
+  const body=JSON.stringify({action,gateway_secret:GATEWAY_SECRET,...payload});
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),12000);
+    try{
+      const r=await fetch(GAS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body,
+        signal:controller.signal
+      });
+      const out=await r.json();
+      if(!out.success) throw new Error(out.code||'GATEWAY_ERROR');
+      return out.data;
+    }catch(err){
+      lastError=err;
+      // retry hanya sekali untuk timeout/network; write tetap aman karena operasi penting
+      // menggunakan id/upsert stabil pada jalur auth.
+      if(attempt===2) break;
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }finally{clearTimeout(timer)}
+  }
+  const e=new Error(lastError?.name==='AbortError'?'GATEWAY_TIMEOUT':(lastError?.message||'GATEWAY_ERROR'));
+  e.code=e.message;
+  throw e;
 }
 
 async function saveSession(req,userId){
@@ -134,7 +146,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.3.3'
+    version:'0.3.5'
   }
 }));
 
@@ -255,6 +267,9 @@ app.post('/api/auth/register',async(req,res)=>{
       });
     }
 
+    const registeredUser=await applyBootstrapAdmin({
+      user_id,email,full_name,account_type,platform_role:'USER'
+    });
     const auth=await saveSession(req,user_id);
 
     res.status(201).json({
@@ -265,7 +280,8 @@ app.post('/api/auth/register',async(req,res)=>{
           user_id,
           email,
           full_name,
-          account_type
+          account_type,
+          platform_role:registeredUser.platform_role||'USER'
         },
         organization
       }
@@ -295,19 +311,21 @@ app.post('/api/auth/login',async(req,res)=>{
       });
     }
 
+    const effectiveUser=await applyBootstrapAdmin(u);
     const now=new Date().toISOString();
 
-    const auth=await saveSession(req,u.user_id);
+    const auth=await saveSession(req,effectiveUser.user_id);
 
     res.json({
       success:true,
       data:{
         token:auth.token,
         user:{
-          user_id:u.user_id,
-          email:u.email,
-          full_name:u.full_name,
-          account_type:u.account_type
+          user_id:effectiveUser.user_id,
+          email:effectiveUser.email,
+          full_name:effectiveUser.full_name,
+          account_type:effectiveUser.account_type,
+          platform_role:effectiveUser.platform_role||'USER'
         }
       }
     });
@@ -329,7 +347,7 @@ app.post('/api/auth/login',async(req,res)=>{
 
 app.get('/api/auth/me',async(req,res)=>{
   try{
-    const u=await sessionUser(req);
+    let u=await sessionUser(req);
 
     if(!u){
       return res.status(401).json({
@@ -338,6 +356,8 @@ app.get('/api/auth/me',async(req,res)=>{
       });
     }
 
+    u=await applyBootstrapAdmin(u);
+
     res.json({
       success:true,
       data:{
@@ -345,7 +365,8 @@ app.get('/api/auth/me',async(req,res)=>{
           user_id:u.user_id,
           email:u.email,
           full_name:u.full_name,
-          account_type:u.account_type
+          account_type:u.account_type,
+          platform_role:u.platform_role||'USER'
         }
       }
     });
@@ -1045,7 +1066,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.3.3'
+          version:'0.3.5'
         }
       }
     });
