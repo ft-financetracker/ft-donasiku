@@ -2,7 +2,8 @@ import express from 'express';
 import crypto from 'node:crypto';
 
 const app=express();
-app.use(express.json({limit:'256kb'}));
+app.use(express.json({limit:'6mb'}));
+app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, private');next();});
 
 const PORT=process.env.PORT||3000;
 const GAS_URL=process.env.KIA_GAS_URL;
@@ -133,7 +134,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.3.1'
+    version:'0.3.3'
   }
 }));
 
@@ -424,6 +425,14 @@ function isAdmin(u){
 function isSuperAdmin(u){
   return u?.platform_role==='SUPER_ADMIN';
 }
+async function applyBootstrapAdmin(user){
+  const configured=String(process.env.KIA_SUPER_ADMIN_EMAIL||'').trim().toLowerCase();
+  if(!configured||!user||String(user.email||'').trim().toLowerCase()!==configured||user.platform_role==='SUPER_ADMIN') return user;
+  const patch={platform_role:'SUPER_ADMIN',updated_at:new Date().toISOString()};
+  await gas('update',{sheet:'01_USERS',idField:'user_id',id:user.user_id,patch});
+  console.log('KIA_BOOTSTRAP_SUPER_ADMIN',user.email);
+  return {...user,...patch};
+}
 function httpError(status,message,code){
   const e=new Error(message);
   e.status=status;
@@ -439,8 +448,9 @@ function sendError(res,e){
   });
 }
 async function requireUser(req){
-  const u=await sessionUser(req);
+  let u=await sessionUser(req);
   if(!u) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+  u=await applyBootstrapAdmin(u);
   return u;
 }
 async function organizationContext(user){
@@ -977,6 +987,44 @@ async function saveHeroSlot(req,res,slotRaw){
 app.post('/api/admin/heroes/:slot',async(req,res)=>saveHeroSlot(req,res,req.params.slot));
 app.post('/api/admin/hero',async(req,res)=>saveHeroSlot(req,res,1));
 
+
+app.get('/api/admin/media',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    const rows=await gas('listWhere',{sheet:'17_MEDIA_LIBRARY',filters:{media_type:'HERO',status:'ACTIVE'},limit:500});
+    const items=[...rows].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+    res.json({success:true,data:{items}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/admin/media/upload',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    const file_name=text(req.body.file_name,140);
+    const mime_type=text(req.body.mime_type,80).toLowerCase();
+    const base64=String(req.body.base64||'');
+    if(!file_name||!base64) throw httpError(400,'File gambar belum dipilih.','MISSING_MEDIA');
+    if(!['image/jpeg','image/png','image/webp'].includes(mime_type)) throw httpError(400,'Format gambar harus JPG, PNG, atau WEBP.','INVALID_MEDIA_TYPE');
+    const media=await gas('uploadHeroMedia',{file_name,mime_type,base64,created_by:user.user_id});
+    await audit(user,'UPLOAD_HERO_MEDIA','MEDIA_LIBRARY',media.media_id,{},media);
+    res.status(201).json({success:true,data:{media}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/admin/media/:id/archive',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    const before=await gas('findOne',{sheet:'17_MEDIA_LIBRARY',filters:{media_id:req.params.id}});
+    if(!before) throw httpError(404,'Media tidak ditemukan.','MEDIA_NOT_FOUND');
+    await gas('archiveHeroMedia',{media_id:req.params.id});
+    await audit(user,'ARCHIVE_HERO_MEDIA','MEDIA_LIBRARY',req.params.id,before,{status:'ARCHIVED'});
+    res.json({success:true,data:{media_id:req.params.id,status:'ARCHIVED'}});
+  }catch(e){sendError(res,e)}
+});
+
 app.get('/api/admin/settings',async(req,res)=>{
   try{
     const user=await requireUser(req);
@@ -997,7 +1045,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.3.1'
+          version:'0.3.3'
         }
       }
     });
