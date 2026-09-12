@@ -1,8 +1,9 @@
-# KIA Backend v0.3.0
+# KIA Backend v0.3.1
 
-Node.js / Express backend for KIA — Donasi Online.
+Menambahkan:
+- GET /api/admin/settings
+- POST /api/admin/users/:id/role
+- POST /api/admin/heroes/:slot
+- public bootstrap mengembalikan `heroes`
 
-Auth engine remains based on stable v0.2.5 per-device session behavior.
-v0.3.0 adds verification, fundraiser program workflow, public program data, admin review, and Hero CMS endpoints.
-
-Secrets remain server-side via Render environment variables.
+Auth/session baseline v0.2.5 dipertahankan.

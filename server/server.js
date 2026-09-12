@@ -133,7 +133,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.3.0'
+    version:'0.3.1'
   }
 }));
 
@@ -391,6 +391,7 @@ app.post('/api/auth/logout',async(req,res)=>{
 // CHECKPOINT 003 — VERIFICATION + PROGRAM + PUBLIC LANDING + CMS HERO
 // ------------------------------------------------------------------
 const PLATFORM_ADMINS=new Set(['PLATFORM_ADMIN','SUPER_ADMIN']);
+const PLATFORM_ROLES=new Set(['USER','PLATFORM_ADMIN','SUPER_ADMIN']);
 const PROGRAM_STATUSES=new Set(['DRAFT','PENDING_REVIEW','APPROVED','ACTIVE','PAUSED','COMPLETED','REJECTED','ARCHIVED']);
 
 function text(value,max=5000){
@@ -419,6 +420,9 @@ function publicUser(u){
 }
 function isAdmin(u){
   return PLATFORM_ADMINS.has(u?.platform_role);
+}
+function isSuperAdmin(u){
+  return u?.platform_role==='SUPER_ADMIN';
 }
 function httpError(status,message,code){
   const e=new Error(message);
@@ -795,12 +799,14 @@ app.get('/api/public/bootstrap',async(req,res)=>{
       raised_amount:raisedByProgram[p.program_id]||0
     }));
     const totalWithdrawn=settledWithdrawals.reduce((sum,w)=>sum+(Number(w.net_amount)||0),0);
-    const hero=[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999))[0]||null;
+    const sortedHeroes=[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999));
+    const hero=sortedHeroes[0]||null;
 
     res.json({
       success:true,
       data:{
         hero,
+        heroes:sortedHeroes,
         programs:publicPrograms,
         stats:{
           total_paid_amount:totalPaid,
@@ -863,6 +869,7 @@ app.get('/api/admin/review',async(req,res)=>{
         profiles:profiles.map(p=>({...p,user:userMap[p.user_id]||null})),
         organizations,
         programs,
+        heroes:[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999)),
         hero:[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999))[0]||null
       }
     });
@@ -923,10 +930,14 @@ app.post('/api/admin/programs/:id/decision',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
-app.post('/api/admin/hero',async(req,res)=>{
+
+async function saveHeroSlot(req,res,slotRaw){
   try{
     const user=await requireUser(req);
     if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+
+    const slot=Number(slotRaw)||1;
+    if(![1,2,3].includes(slot)) throw httpError(400,'Slot hero hanya 1 sampai 3.','INVALID_HERO_SLOT');
 
     const title=text(req.body.title,180);
     const subtitle=text(req.body.subtitle,500);
@@ -935,28 +946,94 @@ app.post('/api/admin/hero',async(req,res)=>{
     const image_url=text(req.body.image_url,1000);
     if(!title||!subtitle) throw httpError(400,'Judul dan subtitle hero wajib diisi.','INCOMPLETE_HERO');
     if(!/^(#|\.\/|\/|https:\/\/)/.test(cta_url)) throw httpError(400,'URL CTA harus berupa anchor, URL relatif, atau HTTPS.','INVALID_CTA_URL');
+    if(image_url && !/^(\.\/|\/|https:\/\/)/.test(image_url)) throw httpError(400,'URL gambar harus berupa URL relatif atau HTTPS.','INVALID_HERO_IMAGE');
 
     const now=new Date().toISOString();
+    const hero_id=`hero_${slot}`;
+    const existing=await gas('findOne',{sheet:'12_HERO_CONTENT',filters:{hero_id}});
     const row={
-      hero_id:'hero_primary',
+      hero_id,
       title,
       subtitle,
       cta_label,
       cta_url,
       image_url,
       status:'ACTIVE',
-      sort_order:1,
-      created_at:now,
+      sort_order:slot,
+      created_at:existing?.created_at||now,
       updated_at:now
     };
     const result=await gas('upsert',{
       sheet:'12_HERO_CONTENT',
-      match:{hero_id:'hero_primary'},
+      match:{hero_id},
       row,
       preserveFields:['hero_id','created_at']
     });
-    await audit(user,'UPDATE_HERO','HERO_CONTENT','hero_primary',{},result.row);
+    await audit(user,'UPDATE_HERO','HERO_CONTENT',hero_id,existing||{},result.row);
     res.json({success:true,data:{hero:result.row}});
+  }catch(e){sendError(res,e)}
+}
+
+app.post('/api/admin/heroes/:slot',async(req,res)=>saveHeroSlot(req,res,req.params.slot));
+app.post('/api/admin/hero',async(req,res)=>saveHeroSlot(req,res,1));
+
+app.get('/api/admin/settings',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+
+    let users=[];
+    if(isSuperAdmin(user)){
+      const rows=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
+      users=rows.map(publicUser).sort((a,b)=>String(a.full_name||'').localeCompare(String(b.full_name||''),'id'));
+    }
+
+    res.json({
+      success:true,
+      data:{
+        current_user:publicUser(user),
+        can_manage_roles:isSuperAdmin(user),
+        users,
+        platform:{
+          name:'KIA — Donasi Online',
+          founder:'Finance Tracker',
+          version:'0.3.1'
+        }
+      }
+    });
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/admin/users/:id/role',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isSuperAdmin(user)) throw httpError(403,'Hanya SUPER_ADMIN yang dapat mengubah role platform.','SUPER_ADMIN_REQUIRED');
+
+    const targetId=text(req.params.id,140);
+    const nextRole=text(req.body.platform_role,40).toUpperCase();
+    if(!PLATFORM_ROLES.has(nextRole)) throw httpError(400,'Role platform tidak valid.','INVALID_PLATFORM_ROLE');
+
+    const target=await gas('findOne',{sheet:'01_USERS',filters:{user_id:targetId,status:'ACTIVE'}});
+    if(!target) throw httpError(404,'Akun tidak ditemukan.','USER_NOT_FOUND');
+
+    if(target.user_id===user.user_id && nextRole!==user.platform_role){
+      throw httpError(409,'Role akun SUPER_ADMIN yang sedang digunakan tidak dapat diubah dari sesi ini. Gunakan SUPER_ADMIN lain.','SELF_ROLE_CHANGE_BLOCKED');
+    }
+
+    if(target.platform_role==='SUPER_ADMIN' && nextRole!=='SUPER_ADMIN'){
+      const all=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
+      const superAdmins=all.filter(x=>x.platform_role==='SUPER_ADMIN');
+      if(superAdmins.length<=1) throw httpError(409,'Minimal harus ada satu SUPER_ADMIN aktif.','LAST_SUPER_ADMIN');
+    }
+
+    if(target.platform_role===nextRole){
+      return res.json({success:true,data:{user:publicUser(target),unchanged:true}});
+    }
+
+    const patch={platform_role:nextRole,updated_at:new Date().toISOString()};
+    await gas('update',{sheet:'01_USERS',idField:'user_id',id:target.user_id,patch});
+    await audit(user,'UPDATE_PLATFORM_ROLE','USER',target.user_id,{platform_role:target.platform_role},patch);
+    res.json({success:true,data:{user:publicUser({...target,...patch})}});
   }catch(e){sendError(res,e)}
 });
 
