@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#176b52">
   <meta name="color-scheme" content="light dark">
   <title>Dashboard | KIA — Donasi Online</title>
-  <link rel="manifest" href="./manifest-v033.json">
+  <link rel="manifest" href="./manifest-v035.json">
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v032-32.png?v=033">
   <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v032-48.png?v=033">
   <link rel="shortcut icon" href="./icons/favicon-white-v032.ico?v=033">
@@ -16,9 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/css/tokens.css">
   <link rel="stylesheet" href="./assets/css/components.css">
-  <link rel="stylesheet" href="./assets/css/public-v032.css">
+  <link rel="stylesheet" href="./assets/css/public-v035.css">
   <link rel="stylesheet" href="./assets/css/ui.css">
-  <link rel="stylesheet" href="./assets/css/dashboard-v033.css">
+  <link rel="stylesheet" href="./assets/css/dashboard-v035.css">
 </head>
 <body class="has-mobile-nav">
   <header>
@@ -129,10 +129,11 @@
             <div class="account-avatar" data-account-initial>K</div>
             <div><h3 data-account-name>Pengguna</h3><p class="muted" data-account-email>—</p></div>
           </div>
+          <div class="notice admin-identity-note" data-admin-identity-note hidden><strong>Akun Platform Admin</strong><br><span>Jenis akun personal/yayasan tidak ditampilkan pada mode administrator.</span></div>
           <div class="info-list">
-            <div><span>Jenis Akun</span><strong data-account-type-text>—</strong></div>
+            <div data-user-account-type-row><span>Jenis Akun</span><strong data-account-type-text>—</strong></div>
             <div><span>Platform Role</span><strong data-account-role-text>USER</strong></div>
-            <div><span>Organisasi Role</span><strong data-org-role-text>—</strong></div>
+            <div data-user-org-role-row><span>Organisasi Role</span><strong data-org-role-text>—</strong></div>
           </div>
           <div class="account-tools">
             <button class="btn btn-soft" type="button" data-sync-account>Sinkronkan Akses</button>
@@ -209,7 +210,7 @@
   <script src="./assets/js/config.js"></script>
   <script src="./assets/js/ui.js"></script>
   <script src="./assets/js/auth.js"></script>
-  <script src="./assets/js/dashboard-v033.js"></script>
+  <script src="./assets/js/dashboard-v035.js"></script>
   <script src="./assets/js/pwa.js"></script>
 </body>
 </html>

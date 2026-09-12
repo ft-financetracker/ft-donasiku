@@ -58,7 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try{
     const response = await KiaAuth.me();
-    const user = response.data.user;
+    const freshUser = response.data.user||{};
+    const user = {
+      ...(cachedUser||{}),
+      ...freshUser,
+      platform_role:freshUser.platform_role||cachedUser?.platform_role||'USER'
+    };
     localStorage.setItem('kia_user', JSON.stringify(user));
     renderUser(user);
   }catch(err){

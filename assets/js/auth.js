@@ -47,7 +47,12 @@ window.KiaAuth = {
 
   setSession(data){
     if(data?.token) localStorage.setItem('kia_session_token', data.token);
-    if(data?.user) localStorage.setItem('kia_user', JSON.stringify(data.user));
+    if(data?.user){
+      const previous=this.getUser()||{};
+      const merged={...previous,...data.user};
+      if(!merged.platform_role) merged.platform_role=previous.platform_role||'USER';
+      localStorage.setItem('kia_user', JSON.stringify(merged));
+    }
     sessionStorage.removeItem('kia_session_token');
     sessionStorage.removeItem('kia_user');
   },
@@ -85,6 +90,7 @@ window.KiaAuth = {
 
     try{
       const res=await fetch(base+path,{
+        cache:'no-store',
         ...fetchOptions,
         headers,
         signal:controller.signal
@@ -134,7 +140,7 @@ window.KiaAuth = {
 
   me(){
     return this.request('/api/auth/me',{
-      timeout:12000
+      timeout:8000
     });
   },
 
