@@ -6,16 +6,19 @@
   <meta name="theme-color" content="#176b52">
   <meta name="color-scheme" content="light dark">
   <title>Dashboard | KIA — Donasi Online</title>
-  <link rel="manifest" href="./manifest-v031.json">
-  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v031-32.png?v=031">
-  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v031-48.png?v=031">
-  <link rel="shortcut icon" href="./icons/favicon-white-v031.ico?v=031">
-  <link rel="apple-touch-icon" href="./icons/kia-apple-v031-180.png?v=031">
+  <link rel="manifest" href="./manifest-v033.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v032-32.png?v=033">
+  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v032-48.png?v=033">
+  <link rel="shortcut icon" href="./icons/favicon-white-v032.ico?v=033">
+  <link rel="apple-touch-icon" href="./icons/kia-apple-v032-180.png?v=033">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/css/tokens.css">
   <link rel="stylesheet" href="./assets/css/components.css">
-  <link rel="stylesheet" href="./assets/css/public-v031.css">
+  <link rel="stylesheet" href="./assets/css/public-v032.css">
   <link rel="stylesheet" href="./assets/css/ui.css">
-  <link rel="stylesheet" href="./assets/css/dashboard-v031.css">
+  <link rel="stylesheet" href="./assets/css/dashboard-v033.css">
 </head>
 <body class="has-mobile-nav">
   <header>
@@ -48,7 +51,7 @@
       <a class="btn btn-ghost" href="#fundraise" data-dashboard-route="fundraise">Galang Dana</a>
       <a class="btn btn-ghost" href="#account" data-dashboard-route="account">Akun</a>
       <a class="btn btn-ghost admin-only" href="#admin" data-dashboard-route="admin" data-admin-nav hidden>Review Admin</a>
-      <a class="btn btn-ghost admin-only" href="#cms" data-dashboard-route="cms" data-admin-nav hidden>CMS Hero</a>
+      <a class="btn btn-ghost admin-only" href="#cms" data-dashboard-route="cms" data-admin-nav hidden>Hero & Media</a>
       <a class="btn btn-ghost admin-only" href="#settings" data-dashboard-route="settings" data-admin-nav hidden>Setting Admin</a>
     </nav>
 
@@ -131,7 +134,8 @@
             <div><span>Platform Role</span><strong data-account-role-text>USER</strong></div>
             <div><span>Organisasi Role</span><strong data-org-role-text>—</strong></div>
           </div>
-          <div class="form-actions">
+          <div class="account-tools">
+            <button class="btn btn-soft" type="button" data-sync-account>Sinkronkan Akses</button>
             <button class="btn btn-danger" type="button" data-logout>Keluar dari Akun</button>
           </div>
         </div>
@@ -139,7 +143,7 @@
           <h2>Menu Admin</h2><p class="muted">Akses cepat sesuai role platform Anda.</p>
           <div class="admin-quick-grid">
             <button class="settings-link route-link" type="button" data-go="admin"><span>Review Admin</span><small>Verifikasi dan program yang menunggu review</small></button>
-            <button class="settings-link route-link" type="button" data-go="cms"><span>CMS Hero</span><small>Kelola tiga slide hero landing page</small></button>
+            <button class="settings-link route-link" type="button" data-go="cms"><span>Hero & Media</span><small>Pilih gambar lama, impor gambar baru, dan atur tiga slide hero</small></button>
             <button class="settings-link route-link" type="button" data-go="settings"><span>Setting Admin</span><small>Role pengguna dan informasi sistem</small></button>
           </div>
         </div>
@@ -157,7 +161,7 @@
 
     <section id="cms" class="dashboard-section admin-only" data-section="cms" hidden>
       <div class="card section-card">
-        <div class="section-head"><div><h2>CMS Hero Landing Page</h2><p class="muted">Tiga slide aktif. Layout tetap LOCK; admin hanya mengubah konten.</p></div></div>
+        <div class="section-head"><div><h2>Hero & Media Landing Page</h2><p class="muted">Tiga slide aktif. Layout tetap LOCK; admin hanya mengubah konten.</p></div></div>
         <div class="hero-slot-tabs" data-hero-slot-tabs>
           <button class="hero-slot-btn is-active" type="button" data-hero-slot="1">Hero 1</button>
           <button class="hero-slot-btn" type="button" data-hero-slot="2">Hero 2</button>
@@ -171,7 +175,7 @@
             <label class="field full">Subtitle<textarea name="subtitle" maxlength="500" required></textarea></label>
             <label class="field">Label CTA<input name="cta_label" maxlength="80" value="Mulai Berdonasi"></label>
             <label class="field">URL CTA<input name="cta_url" maxlength="500" value="#program"></label>
-            <label class="field full">URL Hero Image<input name="image_url" placeholder="./assets/images/hero/hero-1.jpg atau https://..."></label>
+            <label class="field full">URL Hero Image<input name="image_url" placeholder="./assets/images/hero/hero-1.png atau pilih dari Media Library"></label>
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Hero Aktif</button><a class="btn btn-ghost" href="./" target="_blank" rel="noopener">Preview Landing</a></div>
         </form>
@@ -195,17 +199,17 @@
   </main>
 
   <nav class="mobile-bottom-nav app-mobile-nav" aria-label="Navigasi dashboard mobile">
-    <a class="mobile-nav-item" href="#home" data-mobile-route="home"><span class="mobile-nav-icon">⌂</span><span>Beranda</span></a>
-    <a class="mobile-nav-item" href="#programs" data-mobile-route="programs"><span class="mobile-nav-icon">▦</span><span>Program</span></a>
-    <a class="mobile-nav-item mobile-nav-cta" href="#fundraise" data-mobile-route="fundraise"><span class="diamond-cta"><span class="diamond-glyph">◇</span></span><span>Galang</span></a>
-    <a class="mobile-nav-item" href="#verification" data-mobile-route="verification"><span class="mobile-nav-icon">✓</span><span>Verifikasi</span></a>
-    <a class="mobile-nav-item" href="#account" data-mobile-route="account"><span class="mobile-nav-icon">○</span><span>Akun</span></a>
+    <a class="mobile-nav-item" href="#home" data-mobile-route="home"><span class="material-symbols-outlined mobile-nav-icon">home</span><span>Beranda</span></a>
+    <a class="mobile-nav-item" href="#programs" data-mobile-route="programs"><span class="material-symbols-outlined mobile-nav-icon">grid_view</span><span>Program</span></a>
+    <a class="mobile-nav-item mobile-nav-cta" href="#fundraise" data-mobile-route="fundraise"><span class="diamond-cta"><span class="material-symbols-outlined diamond-glyph">volunteer_activism</span></span><span>Galang</span></a>
+    <a class="mobile-nav-item" href="#verification" data-mobile-route="verification"><span class="material-symbols-outlined mobile-nav-icon">verified</span><span>Verifikasi</span></a>
+    <a class="mobile-nav-item" href="#account" data-mobile-route="account"><span class="material-symbols-outlined mobile-nav-icon">account_circle</span><span>Akun</span></a>
   </nav>
 
   <script src="./assets/js/config.js"></script>
   <script src="./assets/js/ui.js"></script>
   <script src="./assets/js/auth.js"></script>
-  <script src="./assets/js/dashboard-v031.js"></script>
+  <script src="./assets/js/dashboard-v033.js"></script>
   <script src="./assets/js/pwa.js"></script>
 </body>
 </html>
