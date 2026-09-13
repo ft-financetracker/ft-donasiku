@@ -1,9 +1,9 @@
-const CACHE='kia-v0.3.5';
+const CACHE='kia-v0.3.7';
 const SHELL=[
   './','./index.html','./login.html','./register.html','./app.html','./program.html','./offline.html',
-  './manifest-v035.json','./manifest.json',
-  './assets/css/tokens.css','./assets/css/components.css','./assets/css/auth.css','./assets/css/ui.css','./assets/css/public-v035.css','./assets/css/dashboard-v035.css','./assets/css/program.css',
-  './assets/js/config.js','./assets/js/auth.js','./assets/js/public-auth-v031.js','./assets/js/auth-page.js','./assets/js/ui.js','./assets/js/login.js','./assets/js/register.js','./assets/js/dashboard-v035.js','./assets/js/public-v032.js','./assets/js/program-v030.js','./assets/js/pwa.js',
+  './manifest-v037.json','./manifest.json',
+  './assets/css/tokens.css','./assets/css/components.css','./assets/css/auth.css','./assets/css/ui.css','./assets/css/public-v035.css','./assets/css/dashboard-v037.css','./assets/css/program.css',
+  './assets/js/config.js','./assets/js/auth.js','./assets/js/public-auth-v031.js','./assets/js/auth-page.js','./assets/js/ui.js','./assets/js/login.js','./assets/js/register.js','./assets/js/dashboard-v037.js','./assets/js/public-v032.js','./assets/js/program-v030.js','./assets/js/pwa.js',
   './icons/kia-symbol-v030.png','./icons/favicon-white-v032-32.png','./icons/favicon-white-v032-48.png','./icons/favicon-white-v032.ico','./icons/kia-apple-v032-180.png','./icons/kia-app-v032-192.png','./icons/kia-app-v032-512.png','./icons/kia-app-v032-maskable-512.png',
   './assets/images/hero/hero-1.png','./assets/images/hero/hero-2.png','./assets/images/hero/hero-3.png'
 ];

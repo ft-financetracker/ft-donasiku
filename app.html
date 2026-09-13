@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#176b52">
   <meta name="color-scheme" content="light dark">
   <title>Dashboard | KIA — Donasi Online</title>
-  <link rel="manifest" href="./manifest-v035.json">
+  <link rel="manifest" href="./manifest-v037.json">
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v032-32.png?v=033">
   <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v032-48.png?v=033">
   <link rel="shortcut icon" href="./icons/favicon-white-v032.ico?v=033">
@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="./assets/css/components.css">
   <link rel="stylesheet" href="./assets/css/public-v035.css">
   <link rel="stylesheet" href="./assets/css/ui.css">
-  <link rel="stylesheet" href="./assets/css/dashboard-v035.css">
+  <link rel="stylesheet" href="./assets/css/dashboard-v037.css">
 </head>
 <body class="has-mobile-nav">
   <header>
@@ -101,7 +101,16 @@
             <label class="field">Tanggal Selesai<input name="end_date" type="date"></label>
             <label class="field full">Ringkasan<textarea name="short_description" maxlength="320" placeholder="Ringkasan singkat yang tampil di kartu program"></textarea></label>
             <label class="field full">Cerita / Deskripsi<textarea name="description" maxlength="6000" placeholder="Jelaskan tujuan, kebutuhan, dan rencana penggunaan dana"></textarea></label>
-            <label class="field full">URL Cover Image<input name="cover_image_url" type="url" inputmode="url" placeholder="https://..."></label>
+            <div class="field full program-cover-field">
+              <span>Cover Program</span>
+              <input type="hidden" name="cover_image_url">
+              <div class="media-upload-row">
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-program-cover-file>
+                <button class="btn btn-soft" type="button" data-upload-program-cover>Impor Gambar</button>
+              </div>
+              <div class="program-cover-preview" data-program-cover-preview><span class="muted mini">Belum ada cover dipilih.</span></div>
+              <small class="muted">JPG/PNG/WEBP · otomatis dioptimalkan sebelum disimpan.</small>
+            </div>
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit" data-program-save>Simpan Draft</button><button class="btn btn-ghost" type="button" data-program-reset>Reset</button></div>
         </form>
@@ -176,7 +185,17 @@
             <label class="field full">Subtitle<textarea name="subtitle" maxlength="500" required></textarea></label>
             <label class="field">Label CTA<input name="cta_label" maxlength="80" value="Mulai Berdonasi"></label>
             <label class="field">URL CTA<input name="cta_url" maxlength="500" value="#program"></label>
-            <label class="field full">URL Hero Image<input name="image_url" placeholder="./assets/images/hero/hero-1.png atau pilih dari Media Library"></label>
+            <input type="hidden" name="image_url">
+            <div class="field full hero-media-panel card">
+              <strong>Gambar Hero</strong>
+              <p class="muted mini">Pilih gambar sebelumnya atau impor gambar baru. Tidak perlu menyalin link.</p>
+              <div class="media-upload-row">
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-hero-file>
+                <button class="btn btn-soft" type="button" data-upload-hero-media>Impor Gambar</button>
+                <button class="btn btn-ghost" type="button" data-refresh-media>Refresh Library</button>
+              </div>
+              <div class="media-library" data-media-library></div>
+            </div>
           </div>
           <div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Hero Aktif</button><a class="btn btn-ghost" href="./" target="_blank" rel="noopener">Preview Landing</a></div>
         </form>
@@ -185,14 +204,107 @@
 
     <section id="settings" class="dashboard-section admin-only" data-section="settings" hidden>
       <div class="card section-card">
-        <div class="section-head"><div><h2>Setting Admin</h2><p class="muted">Role platform dan status sistem. Perubahan role selalu dicatat di Audit Log.</p></div><button class="btn btn-ghost" type="button" data-settings-refresh>Refresh</button></div>
-        <div class="settings-summary-grid">
-          <div class="settings-summary"><span>Role Anda</span><strong data-settings-current-role>—</strong></div>
-          <div class="settings-summary"><span>Versi Backend</span><strong data-settings-version>—</strong></div>
-          <div class="settings-summary"><span>Founder</span><strong>Finance Tracker</strong></div>
+        <div class="section-head settings-intro">
+          <div><h2>Pengaturan</h2><p class="muted">Kelola akses, konten, sistem, dan informasi KIA dari menu yang terstruktur.</p></div>
+          <button class="btn btn-ghost" type="button" data-settings-refresh>Refresh</button>
         </div>
-        <div class="notice" data-role-management-note style="margin-top:18px">Memuat hak akses…</div>
-        <div class="user-role-list" data-user-role-list style="margin-top:16px"><div class="empty-state">Belum dimuat.</div></div>
+
+        <div class="settings-view" data-settings-view="home">
+          <div class="settings-shell" data-settings-groups>
+            <div class="settings-group is-open">
+              <button class="settings-group__head" type="button" data-settings-toggle>
+                <span class="material-symbols-outlined settings-group__icon">group</span>
+                <span class="settings-group__copy"><strong>Pengguna & Akses</strong><small>Kelola akun, role, dan sinkronisasi akses.</small></span>
+                <span class="settings-group__count">3 Menu</span>
+                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
+              </button>
+              <div class="settings-group__body">
+                <button class="settings-subitem" type="button" data-settings-open="users"><span class="material-symbols-outlined settings-subitem__icon">manage_accounts</span><span><strong>Manajemen Pengguna</strong><small>Cari pengguna, filter role, dan ubah hak akses tanpa daftar panjang.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+                <button class="settings-subitem" type="button" data-settings-open="roles"><span class="material-symbols-outlined settings-subitem__icon">admin_panel_settings</span><span><strong>Peran & Hak Akses</strong><small>Lihat fungsi USER, PLATFORM_ADMIN, dan SUPER_ADMIN.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+                <button class="settings-subitem" type="button" data-sync-account><span class="material-symbols-outlined settings-subitem__icon">sync</span><span><strong>Sinkronkan Akses</strong><small>Ambil role dan data akses terbaru tanpa keluar dari akun.</small></span><span class="material-symbols-outlined">refresh</span></button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <button class="settings-group__head" type="button" data-settings-toggle>
+                <span class="material-symbols-outlined settings-group__icon">fact_check</span>
+                <span class="settings-group__copy"><strong>Moderasi</strong><small>Review verifikasi penggalang dana dan program.</small></span>
+                <span class="settings-group__count">1 Menu</span>
+                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
+              </button>
+              <div class="settings-group__body">
+                <button class="settings-subitem route-link" type="button" data-go="admin"><span class="material-symbols-outlined settings-subitem__icon">verified_user</span><span><strong>Review Admin</strong><small>Proses verifikasi akun dan program yang menunggu persetujuan.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <button class="settings-group__head" type="button" data-settings-toggle>
+                <span class="material-symbols-outlined settings-group__icon">palette</span>
+                <span class="settings-group__copy"><strong>Konten & Tampilan</strong><small>Kelola visual publik tanpa mengubah layout utama.</small></span>
+                <span class="settings-group__count">1 Menu</span>
+                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
+              </button>
+              <div class="settings-group__body">
+                <button class="settings-subitem route-link" type="button" data-go="cms"><span class="material-symbols-outlined settings-subitem__icon">collections</span><span><strong>Hero & Media</strong><small>Pilih gambar lama, impor media baru, dan atur tiga slide hero.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <button class="settings-group__head" type="button" data-settings-toggle>
+                <span class="material-symbols-outlined settings-group__icon">settings</span>
+                <span class="settings-group__copy"><strong>Sistem</strong><small>Status aplikasi, versi, dan koneksi akun.</small></span>
+                <span class="settings-group__count">1 Menu</span>
+                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
+              </button>
+              <div class="settings-group__body">
+                <button class="settings-subitem" type="button" data-settings-open="system"><span class="material-symbols-outlined settings-subitem__icon">monitor_heart</span><span><strong>Status Sistem</strong><small>Versi backend, role aktif, dan identitas platform.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <button class="settings-group__head" type="button" data-settings-toggle>
+                <span class="material-symbols-outlined settings-group__icon">info</span>
+                <span class="settings-group__copy"><strong>Informasi</strong><small>Tentang aplikasi dan identitas produk.</small></span>
+                <span class="settings-group__count">1 Menu</span>
+                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
+              </button>
+              <div class="settings-group__body">
+                <button class="settings-subitem" type="button" data-settings-open="about"><span class="material-symbols-outlined settings-subitem__icon">info</span><span><strong>Tentang KIA</strong><small>Informasi produk, founder, arsitektur, dan versi.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-view" data-settings-view="users" hidden>
+          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Manajemen Pengguna</h3><p class="muted mini" style="margin:3px 0 0">Cari dan kelola role pengguna.</p></div></div>
+          <div class="notice" data-role-management-note>Memuat hak akses…</div>
+          <div class="user-manager-toolbar">
+            <input type="search" placeholder="Cari nama atau email…" data-user-search>
+            <select data-user-role-filter><option value="ALL">Semua Role</option><option value="USER">USER</option><option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option><option value="SUPER_ADMIN">SUPER_ADMIN</option></select>
+          </div>
+          <div class="user-manager-meta"><span data-user-result-meta>Belum dimuat.</span><button class="btn btn-ghost" type="button" data-users-refresh>Refresh</button></div>
+          <div class="user-role-list compact" data-user-role-list><div class="empty-state">Buka menu ini untuk memuat pengguna.</div></div>
+          <div class="user-role-pagination" data-user-pagination hidden><button class="btn btn-ghost" type="button" data-user-page-prev>Sebelumnya</button><span class="mini muted" data-user-page-label>1 / 1</span><button class="btn btn-ghost" type="button" data-user-page-next>Berikutnya</button></div>
+        </div>
+
+        <div class="settings-view" data-settings-view="roles" hidden>
+          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Peran & Hak Akses</h3><p class="muted mini" style="margin:3px 0 0">Struktur akses platform KIA.</p></div></div>
+          <div class="role-guide">
+            <div class="role-guide-item"><span class="material-symbols-outlined">person</span><div><strong>USER</strong><p>Akun pengguna biasa untuk donasi, verifikasi, dan pengelolaan program miliknya.</p></div></div>
+            <div class="role-guide-item"><span class="material-symbols-outlined">shield_person</span><div><strong>PLATFORM_ADMIN</strong><p>Dapat melakukan review verifikasi/program dan mengelola Hero & Media.</p></div></div>
+            <div class="role-guide-item"><span class="material-symbols-outlined">admin_panel_settings</span><div><strong>SUPER_ADMIN</strong><p>Memiliki akses admin penuh termasuk mengubah role platform pengguna lain.</p></div></div>
+          </div>
+        </div>
+
+        <div class="settings-view" data-settings-view="system" hidden>
+          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Status Sistem</h3><p class="muted mini" style="margin:3px 0 0">Informasi aplikasi yang sedang aktif.</p></div></div>
+          <div class="system-info-list"><div><span>Role Aktif</span><strong data-settings-current-role>—</strong></div><div><span>Versi Backend</span><strong data-settings-version>—</strong></div><div><span>Platform</span><strong>KIA — Donasi Online</strong></div><div><span>Founder</span><strong>Finance Tracker</strong></div><div><span>Database MVP</span><strong>Google Spreadsheet</strong></div></div>
+        </div>
+
+        <div class="settings-view" data-settings-view="about" hidden>
+          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Tentang KIA</h3><p class="muted mini" style="margin:3px 0 0">Informasi produk dan platform.</p></div></div>
+          <div class="system-info-list"><div><span>Nama Aplikasi</span><strong>KIA — Donasi Online</strong></div><div><span>Parent Brand</span><strong>Finance Tracker</strong></div><div><span>Fokus</span><strong>Donasi & Penggalangan Dana</strong></div><div><span>Frontend</span><strong>GitHub Pages + PWA</strong></div><div><span>Backend</span><strong>Render + Apps Script Gateway</strong></div></div>
+        </div>
       </div>
     </section>
 
@@ -210,7 +322,7 @@
   <script src="./assets/js/config.js"></script>
   <script src="./assets/js/ui.js"></script>
   <script src="./assets/js/auth.js"></script>
-  <script src="./assets/js/dashboard-v035.js"></script>
+  <script src="./assets/js/dashboard-v037.js"></script>
   <script src="./assets/js/pwa.js"></script>
 </body>
 </html>
