@@ -64,7 +64,7 @@ function stableSessionId(userId,device){
 
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
-  const readActions=new Set(['findOne','listWhere','resolveSession']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast']);
   const isRead=readActions.has(action);
   const attempts=isRead?2:1; // WRITE tidak di-retry: cegah duplicate + delay ganda.
   const timeout=Number(opts.timeout)|| (isRead?9000:15000);
@@ -92,6 +92,14 @@ const sessionCache=new Map();
 const SESSION_CACHE_TTL=10*60*1000;
 function cacheSessionToken(token,user){if(token&&user) sessionCache.set(tokenHash(token),{user,expires:Date.now()+SESSION_CACHE_TTL});}
 function dropSessionToken(token){if(token) sessionCache.delete(tokenHash(token));}
+function refreshCachedUser(user){
+  if(!user?.user_id) return;
+  for(const [key,item] of sessionCache.entries()){
+    if(String(item?.user?.user_id)===String(user.user_id)){
+      sessionCache.set(key,{user:{...item.user,...user},expires:Date.now()+SESSION_CACHE_TTL});
+    }
+  }
+}
 
 async function saveSession(req,userId){
   const now=new Date().toISOString();
@@ -138,7 +146,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.3.7'
+    version:'0.4.0'
   }
 }));
 
@@ -308,6 +316,7 @@ app.post('/api/auth/login',async(req,res)=>{
     const now=new Date().toISOString();
 
     const auth=await saveSession(req,effectiveUser.user_id);
+    cacheSessionToken(auth.token,effectiveUser);
 
     res.json({
       success:true,
@@ -445,8 +454,10 @@ async function applyBootstrapAdmin(user){
   if(!configured||!user||String(user.email||'').trim().toLowerCase()!==configured||user.platform_role==='SUPER_ADMIN') return user;
   const patch={platform_role:'SUPER_ADMIN',updated_at:new Date().toISOString()};
   await gas('update',{sheet:'01_USERS',idField:'user_id',id:user.user_id,patch});
+  const nextUser={...user,...patch};
+  refreshCachedUser(nextUser);
   console.log('KIA_BOOTSTRAP_SUPER_ADMIN',user.email);
-  return {...user,...patch};
+  return nextUser;
 }
 function httpError(status,message,code){
   const e=new Error(message);
@@ -455,12 +466,26 @@ function httpError(status,message,code){
   return e;
 }
 function sendError(res,e){
-  const status=Number(e.status)||500;
-  res.status(status).json({
-    success:false,
-    code:e.code||'SERVER_ERROR',
-    message:e.message||'Terjadi kesalahan server.'
-  });
+  const code=String(e.code||e.message||'SERVER_ERROR');
+  const statusMap={
+    UNAUTHORIZED:401,ADMIN_REQUIRED:403,SUPER_ADMIN_REQUIRED:403,FORBIDDEN:403,
+    USER_NOT_FOUND:404,PROGRAM_NOT_FOUND:404,PROFILE_NOT_FOUND:404,ORGANIZATION_NOT_FOUND:404,
+    PROGRAM_MEDIA_NOT_FOUND:404,REVISION_NOT_FOUND:404,
+    INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INVALID_MEDIA_TYPE:400,
+    MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
+    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,
+    GATEWAY_TIMEOUT:504
+  };
+  const friendly={
+    GATEWAY_TIMEOUT:'Server data merespons terlalu lama. Data lokal tetap aman; silakan coba lagi.',
+    UNAUTHORIZED:'Sesi tidak valid atau kedaluwarsa.',ADMIN_REQUIRED:'Akses admin diperlukan.',
+    SUPER_ADMIN_REQUIRED:'Hanya SUPER_ADMIN yang dapat melakukan tindakan ini.',
+    PROGRAM_NOT_FOUND:'Program tidak ditemukan.',VERIFICATION_REQUIRED:'Verifikasi penggalang dana harus disetujui terlebih dahulu.',
+    INVALID_PROGRAM_STATUS:'Status program tidak mendukung tindakan ini.',MEDIA_TOO_LARGE:'Ukuran gambar terlalu besar setelah diproses.',
+    REVISION_NOT_PENDING:'Revisi ini sudah diproses.'
+  };
+  const status=Number(e.status)||statusMap[code]||500;
+  res.status(status).json({success:false,code,message:friendly[code]||e.message||'Terjadi kesalahan server.'});
 }
 async function requireUser(req){
   let u=await sessionUser(req);
@@ -553,30 +578,15 @@ async function audit(user,action,entityType,entityId,before={},after={}){
 
 app.get('/api/dashboard/bootstrap',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    const profilePromise=gas('findOne',{
-      sheet:'02_USER_PROFILES',
-      filters:{user_id:user.user_id}
-    });
-    const orgPromise=user.account_type==='ORGANIZATION'
-      ?organizationContext(user)
-      :Promise.resolve({membership:null,organization:null});
-
-    const [profile,orgCtx]=await Promise.all([profilePromise,orgPromise]);
-    const programs=await ownedPrograms(user,orgCtx);
-    const verification=await verificationContext(user,profile,orgCtx);
-
-    res.json({
-      success:true,
-      data:{
-        user:publicUser(user),
-        profile,
-        membership:orgCtx.membership,
-        organization:orgCtx.organization,
-        verification,
-        programs
-      }
-    });
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) return res.status(401).json({success:false,message:'Sesi tidak valid atau kedaluwarsa.'});
+    const data=await gas('dashboardBootstrapFast',{token_hash},{timeout:12000});
+    // Pertahankan bootstrap SUPER_ADMIN dari environment bila diperlukan.
+    if(data?.user){
+      const effective=await applyBootstrapAdmin(data.user);
+      data.user=publicUser(effective);
+    }
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
@@ -655,48 +665,16 @@ app.post('/api/verification/submit',async(req,res)=>{
 
 app.post('/api/programs',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    const orgCtx=user.account_type==='ORGANIZATION'?await organizationContext(user):{membership:null,organization:null};
-    if(user.account_type==='ORGANIZATION'&&!orgCtx.organization){
-      throw httpError(404,'Organisasi akun tidak ditemukan.','ORGANIZATION_NOT_FOUND');
-    }
-
-    const program_name=text(req.body.program_name,180);
-    const category=text(req.body.category,80);
-    const target_amount=positiveAmount(req.body.target_amount);
-    if(!program_name||!category||!target_amount){
-      throw httpError(400,'Nama program, kategori, dan target dana wajib diisi.','INCOMPLETE_PROGRAM');
-    }
-
-    const now=new Date().toISOString();
-    const program_id=id('prg');
-    const row={
-      program_id,
-      program_code:`KIA-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`,
-      owner_type:user.account_type,
-      owner_user_id:user.account_type==='INDIVIDUAL'?user.user_id:'',
-      organization_id:user.account_type==='ORGANIZATION'?orgCtx.organization.organization_id:'',
-      program_name,
-      slug:`${slugify(program_name)}-${program_id.slice(-6)}`,
-      category,
-      short_description:text(req.body.short_description,320),
-      description:text(req.body.description,6000),
-      cover_image_url:text(req.body.cover_image_url,1000),
-      target_amount,
-      start_date:text(req.body.start_date,30),
-      end_date:text(req.body.end_date,30),
-      visibility:'PRIVATE',
-      status:'DRAFT',
-      created_by:user.user_id,
-      approved_by:'',
-      approved_at:'',
-      created_at:now,
-      updated_at:now
-    };
-
-    await gas('insert',{sheet:'06_PROGRAMS',row});
-    await audit(user,'CREATE_PROGRAM','PROGRAM',program_id,{},row);
-    res.status(201).json({success:true,data:{program:row}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const program_name=text(req.body.program_name,180),category=text(req.body.category,80),target_amount=positiveAmount(req.body.target_amount);
+    if(!program_name||!category||!target_amount) throw httpError(400,'Nama program, kategori, dan target dana wajib diisi.','INCOMPLETE_PROGRAM');
+    const data=await gas('createProgramFast',{token_hash,row:{
+      program_name,category,target_amount,
+      short_description:text(req.body.short_description,320),description:text(req.body.description,6000),
+      start_date:text(req.body.start_date,30),end_date:text(req.body.end_date,30),share_message:text(req.body.share_message,800)
+    }},{timeout:15000});
+    res.status(201).json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
@@ -704,244 +682,100 @@ app.post('/api/programs/:id/update',async(req,res)=>{
   try{
     const token_hash=requestTokenHash(req);
     if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
-    const program_name=text(req.body.program_name,180);
-    const category=text(req.body.category,80);
-    const target_amount=positiveAmount(req.body.target_amount);
-    if(!program_name||!category||!target_amount){
-      throw httpError(400,'Nama program, kategori, dan target dana wajib diisi.','INCOMPLETE_PROGRAM');
-    }
-    const patch={
-      program_name, category,
-      short_description:text(req.body.short_description,320),
-      description:text(req.body.description,6000),
-      cover_image_url:text(req.body.cover_image_url,1000),
-      target_amount,
-      start_date:text(req.body.start_date,30),
-      end_date:text(req.body.end_date,30),
-      updated_at:new Date().toISOString()
-    };
-    // Satu HTTP call ke Apps Script; Apps Script memvalidasi ownership + menulis 1 row sekali.
-    const result=await gas('updateProgramFast',{program_id:req.params.id,token_hash,patch},{timeout:15000});
-    res.json({success:true,data:{program:result.program}});
+    const program_name=text(req.body.program_name,180),category=text(req.body.category,80),target_amount=positiveAmount(req.body.target_amount);
+    if(!program_name||!category||!target_amount) throw httpError(400,'Nama program, kategori, dan target dana wajib diisi.','INCOMPLETE_PROGRAM');
+    const patch={program_name,category,short_description:text(req.body.short_description,320),description:text(req.body.description,6000),target_amount,start_date:text(req.body.start_date,30),end_date:text(req.body.end_date,30),share_message:text(req.body.share_message,800),updated_at:new Date().toISOString()};
+    const data=await gas('updateProgramFast',{program_id:req.params.id,token_hash,patch},{timeout:15000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/programs/:id/submit',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    const orgCtx=user.account_type==='ORGANIZATION'?await organizationContext(user):null;
-    const program=await ownedProgram(user,req.params.id,orgCtx);
-    if(!['DRAFT','REJECTED'].includes(program.status)){
-      throw httpError(409,'Status program tidak dapat diajukan untuk review.','INVALID_PROGRAM_STATUS');
-    }
-
-    const verification=await verificationContext(user,null,orgCtx);
-    if(verification.status!=='APPROVED'){
-      throw httpError(409,'Verifikasi penggalang dana harus disetujui sebelum program diajukan.','VERIFICATION_REQUIRED');
-    }
-    if(!program.program_name||!program.category||!positiveAmount(program.target_amount)||!program.short_description||!program.description){
-      throw httpError(400,'Lengkapi nama, kategori, target, ringkasan, dan deskripsi program sebelum submit.','INCOMPLETE_PROGRAM');
-    }
-
-    const patch={status:'PENDING_REVIEW',visibility:'PRIVATE',updated_at:new Date().toISOString()};
-    await gas('update',{sheet:'06_PROGRAMS',idField:'program_id',id:program.program_id,patch});
-    await audit(user,'SUBMIT_PROGRAM','PROGRAM',program.program_id,{status:program.status},patch);
-    res.json({success:true,data:{status:'PENDING_REVIEW'}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('submitProgramFast',{program_id:req.params.id,token_hash},{timeout:15000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/programs/:id/status',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    const orgCtx=user.account_type==='ORGANIZATION'?await organizationContext(user):null;
-    const program=await ownedProgram(user,req.params.id,orgCtx);
-    const action=text(req.body.action,30).toUpperCase();
-    let patch=null;
-
-    if(action==='PUBLISH'){
-      const verification=await verificationContext(user,null,orgCtx);
-      if(verification.status!=='APPROVED') throw httpError(409,'Verifikasi belum disetujui.','VERIFICATION_REQUIRED');
-      if(program.status!=='APPROVED') throw httpError(409,'Program belum disetujui oleh KIA.','PROGRAM_NOT_APPROVED');
-      patch={status:'ACTIVE',visibility:'PUBLIC',updated_at:new Date().toISOString()};
-    }else if(action==='PAUSE'){
-      if(program.status!=='ACTIVE') throw httpError(409,'Hanya program aktif yang dapat dijeda.','INVALID_PROGRAM_STATUS');
-      patch={status:'PAUSED',visibility:'PRIVATE',updated_at:new Date().toISOString()};
-    }else if(action==='RESUME'){
-      if(program.status!=='PAUSED') throw httpError(409,'Hanya program jeda yang dapat diaktifkan kembali.','INVALID_PROGRAM_STATUS');
-      patch={status:'ACTIVE',visibility:'PUBLIC',updated_at:new Date().toISOString()};
-    }else{
-      throw httpError(400,'Aksi status program tidak dikenali.','UNKNOWN_STATUS_ACTION');
-    }
-
-    await gas('update',{sheet:'06_PROGRAMS',idField:'program_id',id:program.program_id,patch});
-    await audit(user,`PROGRAM_${action}`,'PROGRAM',program.program_id,{status:program.status,visibility:program.visibility},patch);
-    res.json({success:true,data:{status:patch.status,visibility:patch.visibility}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('programStatusFast',{program_id:req.params.id,status_action:text(req.body.action,30),token_hash},{timeout:12000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/public/bootstrap',async(req,res)=>{
   try{
-    const [heroes,programs,paidDonations,settledWithdrawals]=await Promise.all([
-      gas('listWhere',{sheet:'12_HERO_CONTENT',filters:{status:'ACTIVE'},limit:20}),
-      gas('listWhere',{sheet:'06_PROGRAMS',filters:{status:'ACTIVE',visibility:'PUBLIC'},limit:200}),
-      gas('listWhere',{sheet:'08_DONATIONS',filters:{status:'PAID'},limit:5000}),
-      gas('listWhere',{sheet:'11_WITHDRAWALS',filters:{status:'SETTLED'},limit:5000})
-    ]);
+    const data=await gas('publicBootstrapFast',{}, {timeout:12000});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
 
-    const raisedByProgram={};
-    let totalPaid=0;
-    for(const d of paidDonations){
-      const amount=Number(d.gross_amount)||0;
-      totalPaid+=amount;
-      raisedByProgram[d.program_id]=(raisedByProgram[d.program_id]||0)+amount;
-    }
-    const publicPrograms=programs.map(p=>({
-      program_id:p.program_id,
-      program_code:p.program_code,
-      program_name:p.program_name,
-      slug:p.slug,
-      category:p.category,
-      short_description:p.short_description,
-      description:p.description,
-      cover_image_url:p.cover_image_url,
-      target_amount:p.target_amount,
-      start_date:p.start_date,
-      end_date:p.end_date,
-      status:p.status,
-      raised_amount:raisedByProgram[p.program_id]||0
-    }));
-    const totalWithdrawn=settledWithdrawals.reduce((sum,w)=>sum+(Number(w.net_amount)||0),0);
-    const sortedHeroes=[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999));
-    const hero=sortedHeroes[0]||null;
-
-    res.json({
-      success:true,
-      data:{
-        hero,
-        heroes:sortedHeroes,
-        programs:publicPrograms,
-        stats:{
-          total_paid_amount:totalPaid,
-          active_programs:publicPrograms.length,
-          total_withdrawn_net:totalWithdrawn
-        }
-      }
-    });
+app.get('/api/public/programs',async(req,res)=>{
+  try{
+    const data=await gas('publicProgramsFast',{
+      page:Number(req.query.page)||1,limit:Number(req.query.limit)||12,
+      search:text(req.query.search,120),category:text(req.query.category,80)||'ALL'
+    },{timeout:12000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/public/programs/:id',async(req,res)=>{
   try{
-    const program=await gas('findOne',{
-      sheet:'06_PROGRAMS',
-      filters:{program_id:req.params.id,status:'ACTIVE',visibility:'PUBLIC'}
-    });
-    if(!program) throw httpError(404,'Program publik tidak ditemukan.','PROGRAM_NOT_FOUND');
-    const donations=await gas('listWhere',{
-      sheet:'08_DONATIONS',
-      filters:{program_id:program.program_id,status:'PAID'},
-      limit:5000
-    });
-    const raised_amount=donations.reduce((sum,d)=>sum+(Number(d.gross_amount)||0),0);
-    res.json({success:true,data:{program:{
-      program_id:program.program_id,
-      program_code:program.program_code,
-      program_name:program.program_name,
-      slug:program.slug,
-      category:program.category,
-      short_description:program.short_description,
-      description:program.description,
-      cover_image_url:program.cover_image_url,
-      target_amount:program.target_amount,
-      start_date:program.start_date,
-      end_date:program.end_date,
-      status:program.status,
-      raised_amount
-    }}});
+    const data=await gas('publicProgramFast',{program_id:req.params.id},{timeout:12000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/admin/review',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('reviewAdminFast',{token_hash},{timeout:12000});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
 
-    const [profiles,organizations,programs,users,heroes]=await Promise.all([
-      gas('listWhere',{sheet:'02_USER_PROFILES',filters:{identity_status:'PENDING_REVIEW'},limit:500}),
-      gas('listWhere',{sheet:'04_ORGANIZATIONS',filters:{verification_status:'PENDING_REVIEW'},limit:500}),
-      gas('listWhere',{sheet:'06_PROGRAMS',filters:{status:'PENDING_REVIEW'},limit:500}),
-      gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000}),
-      gas('listWhere',{sheet:'12_HERO_CONTENT',filters:{status:'ACTIVE'},limit:20})
-    ]);
-    const userMap=Object.fromEntries(users.map(u=>[u.user_id,publicUser(u)]));
-
-    res.json({
-      success:true,
-      data:{
-        profiles:profiles.map(p=>({...p,user:userMap[p.user_id]||null})),
-        organizations,
-        programs,
-        heroes:[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999)),
-        hero:[...heroes].sort((a,b)=>(Number(a.sort_order)||999)-(Number(b.sort_order)||999))[0]||null
-      }
-    });
+app.get('/api/admin/hero-settings',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('heroAdminFast',{token_hash},{timeout:10000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/admin/verification/decision',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-    const kind=text(req.body.kind,30).toUpperCase();
-    const targetId=text(req.body.id,140);
-    const decision=text(req.body.decision,30).toUpperCase();
-    if(!['APPROVE','REJECT'].includes(decision)) throw httpError(400,'Keputusan tidak valid.','INVALID_DECISION');
-    const status=decision==='APPROVE'?'APPROVED':'REJECTED';
-
-    if(kind==='INDIVIDUAL'){
-      const profile=await gas('findOne',{sheet:'02_USER_PROFILES',filters:{profile_id:targetId}});
-      if(!profile) throw httpError(404,'Profil tidak ditemukan.','PROFILE_NOT_FOUND');
-      const patch={identity_status:status,updated_at:new Date().toISOString()};
-      await gas('update',{sheet:'02_USER_PROFILES',idField:'profile_id',id:targetId,patch});
-      await audit(user,`VERIFICATION_${decision}`,'USER_PROFILE',targetId,{identity_status:profile.identity_status},patch);
-    }else if(kind==='ORGANIZATION'){
-      const org=await gas('findOne',{sheet:'04_ORGANIZATIONS',filters:{organization_id:targetId}});
-      if(!org) throw httpError(404,'Organisasi tidak ditemukan.','ORGANIZATION_NOT_FOUND');
-      const patch={verification_status:status,updated_at:new Date().toISOString()};
-      await gas('update',{sheet:'04_ORGANIZATIONS',idField:'organization_id',id:targetId,patch});
-      await audit(user,`VERIFICATION_${decision}`,'ORGANIZATION',targetId,{verification_status:org.verification_status},patch);
-    }else{
-      throw httpError(400,'Jenis verifikasi tidak valid.','INVALID_VERIFICATION_KIND');
-    }
-
-    res.json({success:true,data:{status}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('reviewDecisionFast',{token_hash,kind:text(req.body.kind,30),decision:text(req.body.decision,30),target_id:text(req.body.target_id,160)},{timeout:15000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/admin/programs/:id/decision',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-    const program=await gas('findOne',{sheet:'06_PROGRAMS',filters:{program_id:req.params.id}});
-    if(!program) throw httpError(404,'Program tidak ditemukan.','PROGRAM_NOT_FOUND');
-    if(program.status!=='PENDING_REVIEW') throw httpError(409,'Program tidak sedang menunggu review.','INVALID_PROGRAM_STATUS');
-
-    const decision=text(req.body.decision,30).toUpperCase();
-    let patch;
-    if(decision==='APPROVE'){
-      patch={status:'APPROVED',approved_by:user.user_id,approved_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    }else if(decision==='REJECT'){
-      patch={status:'REJECTED',visibility:'PRIVATE',updated_at:new Date().toISOString()};
-    }else{
-      throw httpError(400,'Keputusan tidak valid.','INVALID_DECISION');
-    }
-
-    await gas('update',{sheet:'06_PROGRAMS',idField:'program_id',id:program.program_id,patch});
-    await audit(user,`PROGRAM_REVIEW_${decision}`,'PROGRAM',program.program_id,{status:program.status},patch);
-    res.json({success:true,data:{status:patch.status}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('reviewDecisionFast',{token_hash,kind:'PROGRAM',decision:text(req.body.decision,30),target_id:req.params.id},{timeout:15000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
+app.post('/api/admin/revisions/:id/decision',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('reviewDecisionFast',{token_hash,kind:'REVISION',decision:text(req.body.decision,30),target_id:req.params.id},{timeout:15000});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
 
 async function saveHeroSlot(req,res,slotRaw){
   try{
@@ -1011,62 +845,75 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.3.7'
+          version:'0.4.0'
         }
       }
     });
   }catch(e){sendError(res,e)}
 });
 
-let adminUsersCache={expires:0,rows:[]};
 app.get('/api/admin/users',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-    if(!isSuperAdmin(user)) return res.json({success:true,data:{users:[],can_manage_roles:false}});
-    if(Date.now()>adminUsersCache.expires){
-      const rows=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
-      adminUsersCache={
-        expires:Date.now()+45000,
-        rows:rows.map(publicUser).sort((a,b)=>String(a.full_name||'').localeCompare(String(b.full_name||''),'id'))
-      };
-    }
-    res.json({success:true,data:{users:adminUsersCache.rows,can_manage_roles:true}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('adminUsersFast',{token_hash,page:Number(req.query.page)||1,limit:Number(req.query.limit)||8,search:text(req.query.search,120),role:text(req.query.role,40)||'ALL'},{timeout:12000});
+    res.json({success:true,data:{users:data.items||[],page:data.page,total:data.total,total_pages:data.total_pages,can_manage_roles:data.can_manage_roles}});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/admin/users/:id/role',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isSuperAdmin(user)) throw httpError(403,'Hanya SUPER_ADMIN yang dapat mengubah role platform.','SUPER_ADMIN_REQUIRED');
-
-    const targetId=text(req.params.id,140);
-    const nextRole=text(req.body.platform_role,40).toUpperCase();
-    if(!PLATFORM_ROLES.has(nextRole)) throw httpError(400,'Role platform tidak valid.','INVALID_PLATFORM_ROLE');
-
-    const target=await gas('findOne',{sheet:'01_USERS',filters:{user_id:targetId,status:'ACTIVE'}});
-    if(!target) throw httpError(404,'Akun tidak ditemukan.','USER_NOT_FOUND');
-
-    if(target.user_id===user.user_id && nextRole!==user.platform_role){
-      throw httpError(409,'Role akun SUPER_ADMIN yang sedang digunakan tidak dapat diubah dari sesi ini. Gunakan SUPER_ADMIN lain.','SELF_ROLE_CHANGE_BLOCKED');
-    }
-
-    if(target.platform_role==='SUPER_ADMIN' && nextRole!=='SUPER_ADMIN'){
-      const all=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
-      const superAdmins=all.filter(x=>x.platform_role==='SUPER_ADMIN');
-      if(superAdmins.length<=1) throw httpError(409,'Minimal harus ada satu SUPER_ADMIN aktif.','LAST_SUPER_ADMIN');
-    }
-
-    if(target.platform_role===nextRole){
-      return res.json({success:true,data:{user:publicUser(target),unchanged:true}});
-    }
-
-    const patch={platform_role:nextRole,updated_at:new Date().toISOString()};
-    await gas('update',{sheet:'01_USERS',idField:'user_id',id:target.user_id,patch});
-    adminUsersCache={expires:0,rows:[]};
-    await audit(user,'UPDATE_PLATFORM_ROLE','USER',target.user_id,{platform_role:target.platform_role},patch);
-    res.json({success:true,data:{user:publicUser({...target,...patch})}});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('updateRoleFast',{token_hash,target_id:req.params.id,platform_role:text(req.body.platform_role,40)},{timeout:12000});
+    if(data?.user) refreshCachedUser(data.user);
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
+});
+
+// ------------------------------------------------------------------
+// v0.4.0 PROGRAM MEDIA + TRUST CENTER + SECURITY
+// ------------------------------------------------------------------
+app.post('/api/programs/:id/media/upload',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req); if(!token_hash) throw httpError(401,'Sesi tidak valid.','UNAUTHORIZED');
+    const data=await gas('uploadProgramMedia',{token_hash,program_id:req.params.id,file_name:text(req.body.file_name,140),mime_type:text(req.body.mime_type,80),base64:String(req.body.base64||''),caption:text(req.body.caption,240)},{timeout:18000});
+    res.status(201).json({success:true,data:{media:data}});
+  }catch(e){sendError(res,e)}
+});
+app.post('/api/programs/:id/media/:mediaId/cover',async(req,res)=>{
+  try{const token_hash=requestTokenHash(req);const data=await gas('setProgramCover',{token_hash,program_id:req.params.id,program_media_id:req.params.mediaId},{timeout:12000});res.json({success:true,data});}catch(e){sendError(res,e)}
+});
+app.post('/api/programs/:id/media/:mediaId/archive',async(req,res)=>{
+  try{const token_hash=requestTokenHash(req);const data=await gas('archiveProgramMedia',{token_hash,program_id:req.params.id,program_media_id:req.params.mediaId},{timeout:12000});res.json({success:true,data});}catch(e){sendError(res,e)}
+});
+app.post('/api/programs/:id/media/reorder',async(req,res)=>{
+  try{const token_hash=requestTokenHash(req);const data=await gas('reorderProgramMedia',{token_hash,program_id:req.params.id,order:Array.isArray(req.body.order)?req.body.order:[]},{timeout:15000});res.json({success:true,data});}catch(e){sendError(res,e)}
+});
+
+app.get('/api/public/help',async(req,res)=>{try{res.json({success:true,data:await gas('publicHelpFast',{}, {timeout:10000})})}catch(e){sendError(res,e)}});
+app.get('/api/public/faq',async(req,res)=>{try{res.json({success:true,data:{items:await gas('faqPublicFast',{}, {timeout:9000})}})}catch(e){sendError(res,e)}});
+app.get('/api/public/settings',async(req,res)=>{try{res.json({success:true,data:await gas('siteSettingsPublicFast',{}, {timeout:9000})})}catch(e){sendError(res,e)}});
+app.get('/api/admin/faq',async(req,res)=>{try{const token_hash=requestTokenHash(req);res.json({success:true,data:{items:await gas('faqAdminFast',{token_hash},{timeout:10000})}})}catch(e){sendError(res,e)}});
+app.post('/api/admin/faq',async(req,res)=>{try{const token_hash=requestTokenHash(req);const item=await gas('faqSaveFast',{token_hash,row:req.body||{}},{timeout:12000});res.json({success:true,data:{item}})}catch(e){sendError(res,e)}});
+app.post('/api/admin/faq/:id/archive',async(req,res)=>{try{const token_hash=requestTokenHash(req);const data=await gas('faqArchiveFast',{token_hash,faq_id:req.params.id},{timeout:10000});res.json({success:true,data})}catch(e){sendError(res,e)}});
+app.post('/api/admin/site-settings',async(req,res)=>{try{const token_hash=requestTokenHash(req);const data=await gas('siteSettingsSaveFast',{token_hash,items:req.body||{}},{timeout:12000});res.json({success:true,data})}catch(e){sendError(res,e)}});
+
+app.post('/api/security/change-password',async(req,res)=>{
+  try{
+    const u=await requireUser(req); const current=String(req.body.current_password||''),next=String(req.body.new_password||'');
+    if(next.length<10) throw httpError(400,'Password baru minimal 10 karakter.','WEAK_PASSWORD');
+    const fresh=await gas('findOne',{sheet:'01_USERS',filters:{user_id:u.user_id,status:'ACTIVE'}},{timeout:9000});
+    if(!fresh||!verifyPassword(current,fresh.password_hash)) throw httpError(401,'Password saat ini tidak sesuai.','INVALID_CURRENT_PASSWORD');
+    await gas('update',{sheet:'01_USERS',idField:'user_id',id:u.user_id,patch:{password_hash:hashPassword(next),updated_at:new Date().toISOString()}},{timeout:12000});
+    res.json({success:true,data:{changed:true}});
+  }catch(e){sendError(res,e)}
+});
+app.get('/api/security/sessions',async(req,res)=>{
+  try{const u=await requireUser(req);const rows=await gas('listWhere',{sheet:'03_SESSIONS',filters:{user_id:u.user_id,status:'ACTIVE'},limit:50},{timeout:9000});res.json({success:true,data:{items:rows.map(x=>({session_id:x.session_id,expires_at:x.expires_at,last_seen_at:x.last_seen_at,created_at:x.created_at}))}})}catch(e){sendError(res,e)}
+});
+app.post('/api/security/logout-all',async(req,res)=>{
+  try{const token_hash=requestTokenHash(req);const data=await gas('revokeAllSessionsFast',{token_hash},{timeout:12000});sessionCache.clear();res.json({success:true,data})}catch(e){sendError(res,e)}
 });
 
 app.listen(PORT,()=>console.log(`KIA backend ${PORT}`));

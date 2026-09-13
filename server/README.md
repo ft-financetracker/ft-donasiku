@@ -1,9 +1,8 @@
-# KIA Backend v0.3.1
+# KIA Backend v0.4.0
 
-Menambahkan:
-- GET /api/admin/settings
-- POST /api/admin/users/:id/role
-- POST /api/admin/heroes/:slot
-- public bootstrap mengembalikan `heroes`
+Runtime: Node.js / Render.
+Root Directory di Render: `server`.
+Build: `npm install`.
+Start: `node server.js`.
 
-Auth/session baseline v0.2.5 dipertahankan.
+Source backend disimpan di GitHub. Jangan upload file backend secara manual ke dashboard Render; commit folder `server/` ke repository lalu biarkan Render auto-deploy.
