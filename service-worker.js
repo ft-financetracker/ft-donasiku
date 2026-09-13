@@ -1,4 +1,4 @@
-const CACHE='kia-v0.4.0';
+const CACHE='kia-v0.4.1';
 const SHELL=[
   './','./index.html','./login.html','./register.html','./app.html','./program.html','./programs.html','./help.html','./info.html','./offline.html',
   './manifest-v040.json','./manifest.json','./app-version.json','./changelog.json',

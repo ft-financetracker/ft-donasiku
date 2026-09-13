@@ -1,5 +1,5 @@
 window.KiaPWA=(()=>{
-  const currentVersion='0.4.0'; let deferredInstall=null, registration=null;
+  const currentVersion='0.4.1'; let deferredInstall=null, registration=null;
   const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e});
   if('serviceWorker'in navigator){window.addEventListener('load',async()=>{try{registration=await navigator.serviceWorker.register('./service-worker.js');registration.update().catch(()=>{})}catch(e){console.warn('SW_REGISTER_FAILED',e)}})}

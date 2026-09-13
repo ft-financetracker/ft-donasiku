@@ -134,7 +134,7 @@ window.KiaAuth = {
     return this.request('/api/auth/login',{
       method:'POST',
       body:JSON.stringify(payload),
-      timeout:35000
+      timeout:60000
     });
   },
 

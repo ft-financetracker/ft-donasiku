@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.4.1",
+      "date": "13 September 2026",
+      "changes": {
+        "PERBAIKAN": [
+          "Login tidak lagi gagal hanya karena Apps Script membutuhkan lebih dari 9 detik untuk merespons",
+          "Timeout autentikasi memakai satu kesempatan yang lebih panjang agar cold start tidak memicu retry ganda",
+          "Tiga Hero landing dipulihkan; slot kosong otomatis memakai tiga gambar bawaan KIA",
+          "Carousel Hero kembali berpindah otomatis dan tetap dapat dinavigasi manual"
+        ]
+      }
+    },
+    {
       "version": "0.4.0",
       "date": "13 September 2026",
       "changes": {
@@ -36,8 +48,13 @@
       "version": "0.3.7",
       "date": "September 2026",
       "changes": {
-        "PENINGKATAN": ["Fast gateway untuk update program", "Import gambar langsung"],
-        "PERBAIKAN": ["Update row Spreadsheet menggunakan satu setValues"]
+        "PENINGKATAN": [
+          "Fast gateway untuk update program",
+          "Import gambar langsung"
+        ],
+        "PERBAIKAN": [
+          "Update row Spreadsheet menggunakan satu setValues"
+        ]
       }
     }
   ]
