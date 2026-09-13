@@ -44,6 +44,7 @@ const verifyPassword=(p,stored)=>{
 };
 
 const tokenHash=t=>crypto.createHash('sha256').update(t).digest('hex');
+const requestTokenHash=req=>{const raw=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');return raw?tokenHash(raw):'';};
 
 function deviceId(req){
   const raw=String(req.headers['x-kia-device-id']||'').trim();
@@ -61,36 +62,36 @@ function stableSessionId(userId,device){
   return `ses_${digest}`;
 }
 
-async function gas(action,payload={}){
+async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
-
+  const readActions=new Set(['findOne','listWhere','resolveSession']);
+  const isRead=readActions.has(action);
+  const attempts=isRead?2:1; // WRITE tidak di-retry: cegah duplicate + delay ganda.
+  const timeout=Number(opts.timeout)|| (isRead?9000:15000);
   const body=JSON.stringify({action,gateway_secret:GATEWAY_SECRET,...payload});
   let lastError=null;
-  for(let attempt=1;attempt<=2;attempt++){
+  for(let attempt=1;attempt<=attempts;attempt++){
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),12000);
+    const timer=setTimeout(()=>controller.abort(),timeout);
     try{
-      const r=await fetch(GAS_URL,{
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body,
-        signal:controller.signal
-      });
+      const r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,signal:controller.signal});
       const out=await r.json();
-      if(!out.success) throw new Error(out.code||'GATEWAY_ERROR');
+      if(!out.success){const e=new Error(out.code||'GATEWAY_ERROR');e.code=out.code;throw e;}
       return out.data;
     }catch(err){
       lastError=err;
-      // retry hanya sekali untuk timeout/network; write tetap aman karena operasi penting
-      // menggunakan id/upsert stabil pada jalur auth.
-      if(attempt===2) break;
-      await new Promise(resolve=>setTimeout(resolve,250));
+      if(attempt<attempts) await new Promise(resolve=>setTimeout(resolve,180));
     }finally{clearTimeout(timer)}
   }
   const e=new Error(lastError?.name==='AbortError'?'GATEWAY_TIMEOUT':(lastError?.message||'GATEWAY_ERROR'));
   e.code=e.message;
   throw e;
 }
+
+const sessionCache=new Map();
+const SESSION_CACHE_TTL=10*60*1000;
+function cacheSessionToken(token,user){if(token&&user) sessionCache.set(tokenHash(token),{user,expires:Date.now()+SESSION_CACHE_TTL});}
+function dropSessionToken(token){if(token) sessionCache.delete(tokenHash(token));}
 
 async function saveSession(req,userId){
   const now=new Date().toISOString();
@@ -122,31 +123,22 @@ async function saveSession(req,userId){
 async function sessionUser(req){
   const raw=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
   if(!raw) return null;
+  const key=tokenHash(raw);
+  const cached=sessionCache.get(key);
+  if(cached&&cached.expires>Date.now()) return cached.user;
+  if(cached) sessionCache.delete(key);
 
-  const s=await gas('findOne',{
-    sheet:'03_SESSIONS',
-    filters:{
-      token_hash:tokenHash(raw),
-      status:'ACTIVE'
-    }
-  });
-
-  if(!s||new Date(s.expires_at)<=new Date()) return null;
-
-  return gas('findOne',{
-    sheet:'01_USERS',
-    filters:{
-      user_id:s.user_id,
-      status:'ACTIVE'
-    }
-  });
+  const resolved=await gas('resolveSession',{token_hash:key});
+  if(!resolved?.user) return null;
+  sessionCache.set(key,{user:resolved.user,expires:Date.now()+SESSION_CACHE_TTL});
+  return resolved.user;
 }
 
 app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.3.5'
+    version:'0.3.7'
   }
 }));
 
@@ -271,6 +263,7 @@ app.post('/api/auth/register',async(req,res)=>{
       user_id,email,full_name,account_type,platform_role:'USER'
     });
     const auth=await saveSession(req,user_id);
+    cacheSessionToken(auth.token,{user_id,email,phone:phone||'',full_name,account_type,platform_role:'USER',status:'ACTIVE'});
 
     res.status(201).json({
       success:true,
@@ -379,6 +372,7 @@ app.get('/api/auth/me',async(req,res)=>{
 app.post('/api/auth/logout',async(req,res)=>{
   try{
     const raw=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+    dropSessionToken(raw);
 
     if(raw){
       const s=await gas('findOne',{
@@ -708,24 +702,16 @@ app.post('/api/programs',async(req,res)=>{
 
 app.post('/api/programs/:id/update',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    const orgCtx=user.account_type==='ORGANIZATION'?await organizationContext(user):null;
-    const program=await ownedProgram(user,req.params.id,orgCtx);
-    if(!['DRAFT','REJECTED'].includes(program.status)){
-      throw httpError(409,'Program hanya dapat diedit saat Draft atau Ditolak.','PROGRAM_NOT_EDITABLE');
-    }
-
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
     const program_name=text(req.body.program_name,180);
     const category=text(req.body.category,80);
     const target_amount=positiveAmount(req.body.target_amount);
     if(!program_name||!category||!target_amount){
       throw httpError(400,'Nama program, kategori, dan target dana wajib diisi.','INCOMPLETE_PROGRAM');
     }
-
     const patch={
-      program_name,
-      slug:program.slug||`${slugify(program_name)}-${program.program_id.slice(-6)}`,
-      category,
+      program_name, category,
       short_description:text(req.body.short_description,320),
       description:text(req.body.description,6000),
       cover_image_url:text(req.body.cover_image_url,1000),
@@ -734,14 +720,9 @@ app.post('/api/programs/:id/update',async(req,res)=>{
       end_date:text(req.body.end_date,30),
       updated_at:new Date().toISOString()
     };
-    await gas('update',{
-      sheet:'06_PROGRAMS',
-      idField:'program_id',
-      id:program.program_id,
-      patch
-    });
-    await audit(user,'UPDATE_PROGRAM','PROGRAM',program.program_id,program,patch);
-    res.json({success:true,data:{program:{...program,...patch}}});
+    // Satu HTTP call ke Apps Script; Apps Script memvalidasi ownership + menulis 1 row sekali.
+    const result=await gas('updateProgramFast',{program_id:req.params.id,token_hash,patch},{timeout:15000});
+    res.json({success:true,data:{program:result.program}});
   }catch(e){sendError(res,e)}
 });
 
@@ -964,44 +945,18 @@ app.post('/api/admin/programs/:id/decision',async(req,res)=>{
 
 async function saveHeroSlot(req,res,slotRaw){
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
     const slot=Number(slotRaw)||1;
     if(![1,2,3].includes(slot)) throw httpError(400,'Slot hero hanya 1 sampai 3.','INVALID_HERO_SLOT');
-
-    const title=text(req.body.title,180);
-    const subtitle=text(req.body.subtitle,500);
+    const title=text(req.body.title,180), subtitle=text(req.body.subtitle,500);
     const cta_label=text(req.body.cta_label,80)||'Mulai Berdonasi';
     const cta_url=text(req.body.cta_url,500)||'#program';
     const image_url=text(req.body.image_url,1000);
     if(!title||!subtitle) throw httpError(400,'Judul dan subtitle hero wajib diisi.','INCOMPLETE_HERO');
-    if(!/^(#|\.\/|\/|https:\/\/)/.test(cta_url)) throw httpError(400,'URL CTA harus berupa anchor, URL relatif, atau HTTPS.','INVALID_CTA_URL');
-    if(image_url && !/^(\.\/|\/|https:\/\/)/.test(image_url)) throw httpError(400,'URL gambar harus berupa URL relatif atau HTTPS.','INVALID_HERO_IMAGE');
-
-    const now=new Date().toISOString();
-    const hero_id=`hero_${slot}`;
-    const existing=await gas('findOne',{sheet:'12_HERO_CONTENT',filters:{hero_id}});
-    const row={
-      hero_id,
-      title,
-      subtitle,
-      cta_label,
-      cta_url,
-      image_url,
-      status:'ACTIVE',
-      sort_order:slot,
-      created_at:existing?.created_at||now,
-      updated_at:now
-    };
-    const result=await gas('upsert',{
-      sheet:'12_HERO_CONTENT',
-      match:{hero_id},
-      row,
-      preserveFields:['hero_id','created_at']
-    });
-    await audit(user,'UPDATE_HERO','HERO_CONTENT',hero_id,existing||{},result.row);
-    res.json({success:true,data:{hero:result.row}});
+    const row={title,subtitle,cta_label,cta_url,image_url};
+    const result=await gas('saveHeroFast',{slot,row,token_hash},{timeout:15000});
+    res.json({success:true,data:{hero:result.hero}});
   }catch(e){sendError(res,e)}
 }
 
@@ -1019,29 +974,27 @@ app.get('/api/admin/media',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
-app.post('/api/admin/media/upload',async(req,res)=>{
+async function uploadMediaRequest(req,res,mediaType,adminOnly=false){
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
     const file_name=text(req.body.file_name,140);
     const mime_type=text(req.body.mime_type,80).toLowerCase();
     const base64=String(req.body.base64||'');
     if(!file_name||!base64) throw httpError(400,'File gambar belum dipilih.','MISSING_MEDIA');
     if(!['image/jpeg','image/png','image/webp'].includes(mime_type)) throw httpError(400,'Format gambar harus JPG, PNG, atau WEBP.','INVALID_MEDIA_TYPE');
-    const media=await gas('uploadHeroMedia',{file_name,mime_type,base64,created_by:user.user_id});
-    await audit(user,'UPLOAD_HERO_MEDIA','MEDIA_LIBRARY',media.media_id,{},media);
+    const media=await gas('uploadMedia',{file_name,mime_type,base64,media_type:mediaType,token_hash},{timeout:18000});
     res.status(201).json({success:true,data:{media}});
   }catch(e){sendError(res,e)}
-});
+}
+app.post('/api/admin/media/upload',async(req,res)=>uploadMediaRequest(req,res,'HERO',true));
+app.post('/api/media/program-cover',async(req,res)=>uploadMediaRequest(req,res,'PROGRAM_COVER',false));
 
 app.post('/api/admin/media/:id/archive',async(req,res)=>{
   try{
-    const user=await requireUser(req);
-    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-    const before=await gas('findOne',{sheet:'17_MEDIA_LIBRARY',filters:{media_id:req.params.id}});
-    if(!before) throw httpError(404,'Media tidak ditemukan.','MEDIA_NOT_FOUND');
-    await gas('archiveHeroMedia',{media_id:req.params.id});
-    await audit(user,'ARCHIVE_HERO_MEDIA','MEDIA_LIBRARY',req.params.id,before,{status:'ARCHIVED'});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    await gas('archiveMedia',{media_id:req.params.id,token_hash},{timeout:12000});
     res.json({success:true,data:{media_id:req.params.id,status:'ARCHIVED'}});
   }catch(e){sendError(res,e)}
 });
@@ -1050,26 +1003,35 @@ app.get('/api/admin/settings',async(req,res)=>{
   try{
     const user=await requireUser(req);
     if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
-
-    let users=[];
-    if(isSuperAdmin(user)){
-      const rows=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
-      users=rows.map(publicUser).sort((a,b)=>String(a.full_name||'').localeCompare(String(b.full_name||''),'id'));
-    }
-
     res.json({
       success:true,
       data:{
         current_user:publicUser(user),
         can_manage_roles:isSuperAdmin(user),
-        users,
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.3.5'
+          version:'0.3.7'
         }
       }
     });
+  }catch(e){sendError(res,e)}
+});
+
+let adminUsersCache={expires:0,rows:[]};
+app.get('/api/admin/users',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    if(!isAdmin(user)) throw httpError(403,'Akses admin diperlukan.','ADMIN_REQUIRED');
+    if(!isSuperAdmin(user)) return res.json({success:true,data:{users:[],can_manage_roles:false}});
+    if(Date.now()>adminUsersCache.expires){
+      const rows=await gas('listWhere',{sheet:'01_USERS',filters:{status:'ACTIVE'},limit:5000});
+      adminUsersCache={
+        expires:Date.now()+45000,
+        rows:rows.map(publicUser).sort((a,b)=>String(a.full_name||'').localeCompare(String(b.full_name||''),'id'))
+      };
+    }
+    res.json({success:true,data:{users:adminUsersCache.rows,can_manage_roles:true}});
   }catch(e){sendError(res,e)}
 });
 
@@ -1101,6 +1063,7 @@ app.post('/api/admin/users/:id/role',async(req,res)=>{
 
     const patch={platform_role:nextRole,updated_at:new Date().toISOString()};
     await gas('update',{sheet:'01_USERS',idField:'user_id',id:target.user_id,patch});
+    adminUsersCache={expires:0,rows:[]};
     await audit(user,'UPDATE_PLATFORM_ROLE','USER',target.user_id,{platform_role:target.platform_role},patch);
     res.json({success:true,data:{user:publicUser({...target,...patch})}});
   }catch(e){sendError(res,e)}
