@@ -1,0 +1,8 @@
+{
+  "version": "0.4.0",
+  "build": 40,
+  "released_at": "2026-09-13",
+  "required_update": false,
+  "minimum_supported_version": "0.3.7",
+  "summary": "Stability, Program Album, Trust Center, Public Catalog, Settings & PWA Update Center"
+}

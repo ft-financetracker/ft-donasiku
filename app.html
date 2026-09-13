@@ -1,328 +1,49 @@
-<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#176b52">
-  <meta name="color-scheme" content="light dark">
-  <title>Dashboard | KIA — Donasi Online</title>
-  <link rel="manifest" href="./manifest-v037.json">
-  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v032-32.png?v=033">
-  <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-white-v032-48.png?v=033">
-  <link rel="shortcut icon" href="./icons/favicon-white-v032.ico?v=033">
-  <link rel="apple-touch-icon" href="./icons/kia-apple-v032-180.png?v=033">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/tokens.css">
-  <link rel="stylesheet" href="./assets/css/components.css">
-  <link rel="stylesheet" href="./assets/css/public-v035.css">
-  <link rel="stylesheet" href="./assets/css/ui.css">
-  <link rel="stylesheet" href="./assets/css/dashboard-v037.css">
-</head>
-<body class="has-mobile-nav">
-  <header>
-    <div class="container nav">
-      <a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a>
-      <div class="app-nav-meta">
-        <a class="btn btn-ghost mobile-hide" href="./">Landing</a>
-        <button class="btn btn-ghost mobile-hide" type="button" data-logout>Keluar</button>
-      </div>
-    </div>
-  </header>
+<!doctype html><html lang="id"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#176b52"><meta name="color-scheme" content="light"><title>Dashboard | KIA — Donasi Online</title>
+<link rel="manifest" href="./manifest-v040.json"><link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-white-v040-32.png?v=040"><link rel="shortcut icon" href="./icons/favicon-white-v040.ico?v=040"><link rel="apple-touch-icon" href="./icons/kia-apple-v040-180.png?v=040">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/tokens.css"><link rel="stylesheet" href="./assets/css/components.css"><link rel="stylesheet" href="./assets/css/ui.css"><link rel="stylesheet" href="./assets/css/dashboard-v040.css">
+</head><body class="has-mobile-nav">
+<header><div class="container nav" style="height:68px;display:flex;align-items:center;justify-content:space-between"><a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a><div style="display:flex;gap:8px"><a class="btn btn-ghost" href="./">Landing</a><button class="btn btn-ghost" type="button" data-logout>Keluar</button></div></div></header>
+<main class="container app-shell">
+<section class="app-hero"><div><p class="muted" data-dashboard-status>Sesi tersimpan · menyiapkan data…</p><h1>Assalamu'alaikum, <span data-user-name>Pengguna</span></h1><p class="muted">KIA — Donasi Online · Founded by Finance Tracker</p></div><div class="app-badge-stack"><span class="status-pill" data-account-badge>AKUN</span><span class="role-pill" data-role-badge>USER</span></div></section>
+<nav class="app-tabs" aria-label="Menu dashboard"><a class="btn btn-primary" href="#home" data-dashboard-route="home">Beranda</a><a class="btn btn-ghost" href="#verification" data-dashboard-route="verification">Verifikasi</a><a class="btn btn-ghost" href="#programs" data-dashboard-route="programs">Program Saya</a><a class="btn btn-ghost admin-only" href="#admin" data-dashboard-route="admin" data-admin-nav hidden>Review Admin</a><a class="btn btn-ghost admin-only" href="#cms" data-dashboard-route="cms" data-admin-nav hidden>Hero & Media</a><a class="btn btn-ghost admin-only" href="#settings" data-dashboard-route="settings" data-admin-nav hidden>Pengaturan</a><a class="btn btn-ghost" href="#account" data-dashboard-route="account">Akun</a></nav>
 
-  <main class="container app-shell">
-    <div class="app-hero">
-      <div>
-        <p class="muted" data-dashboard-status>Sesi aktif · memuat data akun…</p>
-        <h1>Assalamu'alaikum, <span data-user-name>Pengguna</span></h1>
-        <p class="muted">KIA — Donasi Online · Founded by Finance Tracker</p>
-      </div>
-      <div class="app-badge-stack">
-        <span class="status-pill" data-account-badge>PERORANGAN</span>
-        <span class="role-pill" data-role-badge>USER</span>
-      </div>
-    </div>
+<section class="dashboard-section" data-section="home"><div class="dashboard-grid"><div class="card metric"><span class="muted">Status Verifikasi</span><strong data-home-verification>—</strong></div><div class="card metric"><span class="muted">Total Program</span><strong data-home-program-count>0</strong></div><div class="card metric"><span class="muted">Program Aktif</span><strong data-home-active-count>0</strong></div></div><div class="card section-card" style="margin-top:14px"><div class="section-head"><div><h2>Portal Saya</h2><p class="muted">Kelola verifikasi, program, media, dan transparansi dari satu tempat.</p></div></div><div class="form-actions"><button class="btn btn-primary" type="button" data-go="programs">Kelola Program</button><button class="btn btn-soft" type="button" data-go="verification">Cek Verifikasi</button><a class="btn btn-ghost" href="./programs.html">Lihat Program Publik</a></div></div></section>
 
-    <nav class="app-tabs" aria-label="Menu dashboard">
-      <a class="btn btn-primary" href="#home" data-dashboard-route="home">Beranda</a>
-      <a class="btn btn-ghost" href="#verification" data-dashboard-route="verification">Verifikasi</a>
-      <a class="btn btn-ghost" href="#programs" data-dashboard-route="programs">Program Saya</a>
-      <a class="btn btn-ghost" href="#fundraise" data-dashboard-route="fundraise">Galang Dana</a>
-      <a class="btn btn-ghost" href="#account" data-dashboard-route="account">Akun</a>
-      <a class="btn btn-ghost admin-only" href="#admin" data-dashboard-route="admin" data-admin-nav hidden>Review Admin</a>
-      <a class="btn btn-ghost admin-only" href="#cms" data-dashboard-route="cms" data-admin-nav hidden>Hero & Media</a>
-      <a class="btn btn-ghost admin-only" href="#settings" data-dashboard-route="settings" data-admin-nav hidden>Setting Admin</a>
-    </nav>
+<section class="dashboard-section" data-section="verification" hidden><div class="card section-card"><div class="section-head"><div><h2>Verifikasi Penggalang Dana</h2><p class="muted">Program dapat diajukan setelah identitas atau yayasan disetujui.</p></div><span class="status-pill" data-verification-status>—</span></div><div class="notice" data-verification-note>Memuat status…</div><form id="verificationForm" style="margin-top:16px"><div data-verification-fields></div><div class="form-actions"><button class="btn btn-primary" type="submit" data-verification-submit>Ajukan Verifikasi</button></div></form></div></section>
 
-    <section id="home" class="dashboard-section" data-section="home">
-      <div class="dashboard-grid">
-        <div class="card metric"><span class="muted">Status Verifikasi</span><strong data-home-verification>—</strong></div>
-        <div class="card metric"><span class="muted">Total Program</span><strong data-home-program-count>0</strong></div>
-        <div class="card metric"><span class="muted">Program Aktif</span><strong data-home-active-count>0</strong></div>
-      </div>
-      <div class="card section-card" style="margin-top:16px">
-        <div class="section-head"><div><h2>Portal Saya</h2><p class="muted">Kelola kesiapan akun dan program penggalangan dana dari satu tempat.</p></div></div>
-        <div class="form-actions">
-          <button class="btn btn-primary route-link" type="button" data-go="verification">Ajukan Verifikasi</button>
-          <button class="btn btn-soft route-link" type="button" data-go="programs">Kelola Program</button>
-          <a class="btn btn-ghost" href="./#program">Jelajahi Program Publik</a>
-        </div>
-      </div>
-    </section>
+<section class="dashboard-section" data-section="programs" hidden>
+<div class="card section-card"><div class="section-head"><div><h2>Program Saya</h2><p class="muted">Program aktif tetap dapat diperbarui. Perubahan material tertentu akan masuk review ulang.</p></div><button class="btn btn-primary" type="button" data-program-new>+ Program Baru</button></div><div class="program-list" data-program-list><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div>
+<div class="card section-card program-editor" data-program-editor hidden><div class="section-head"><div><h2 data-program-editor-title>Buat Program</h2><p class="muted" data-program-editor-note>Isi data program. Link publik dibuat otomatis oleh sistem.</p></div><button class="btn btn-ghost" type="button" data-program-close>Tutup</button></div>
+<form id="programForm"><input type="hidden" name="program_id"><div class="form-grid"><label class="field full">Nama Program<input name="program_name" maxlength="180" required></label><label class="field">Kategori<select name="category" required><option value="">Pilih kategori</option><option>Pendidikan</option><option>Kesehatan</option><option>Kemanusiaan</option><option>Masjid</option><option>Pesantren</option><option>Sosial</option><option>Bencana</option><option>Lainnya</option></select></label><label class="field">Target Dana<input name="target_amount" type="number" min="1000" step="1000" required></label><label class="field">Tanggal Mulai<input name="start_date" type="date"></label><label class="field">Tanggal Selesai<input name="end_date" type="date"></label><label class="field full">Ringkasan<textarea name="short_description" maxlength="320"></textarea></label><label class="field full">Cerita / Deskripsi<textarea name="description" maxlength="6000"></textarea></label><label class="field full">Pesan Bagikan<textarea name="share_message" maxlength="800" placeholder="Contoh: Mari bersama membantu program ini. Semoga menjadi amal jariyah."></textarea><span class="mini muted">Link program ditambahkan otomatis saat dibagikan dan tidak perlu diedit.</span></label></div><div class="form-actions"><button class="btn btn-primary" type="submit" data-program-save>Simpan</button><button class="btn btn-ghost" type="button" data-program-close>Batal</button></div></form>
+<div data-program-media-panel hidden><div class="album-toolbar"><div><h3 style="margin:0">Album Program</h3><p class="muted mini" style="margin:3px 0 0">Pilih beberapa gambar sekaligus. Salah satu dapat dijadikan poster.</p></div><label class="btn btn-soft" style="cursor:pointer"><span class="material-symbols-outlined">add_photo_alternate</span> Impor Gambar<input type="file" accept="image/jpeg,image/png,image/webp" multiple data-program-media-input hidden></label></div><div class="notice" data-program-media-status hidden></div><div class="program-album" data-program-album></div></div>
+</div></section>
 
-    <section id="verification" class="dashboard-section" data-section="verification" hidden>
-      <div class="card section-card">
-        <div class="section-head">
-          <div><h2>Verifikasi Penggalang Dana</h2><p class="muted">Verifikasi harus disetujui sebelum program dapat dikirim ke review KIA.</p></div>
-          <span class="status-pill" data-verification-status data-status="UNVERIFIED">UNVERIFIED</span>
-        </div>
-        <div class="notice" data-verification-note>Memuat data verifikasi…</div>
-        <form id="verificationForm" style="margin-top:18px">
-          <div data-verification-fields></div>
-          <div class="form-actions"><button class="btn btn-primary" type="submit" data-verification-submit>Ajukan Verifikasi</button></div>
-        </form>
-      </div>
-    </section>
+<section class="dashboard-section admin-only" data-section="admin" hidden><div class="card section-card"><div class="section-head"><div><h2>Review Admin</h2><p class="muted">Review penggalang, program, dan revisi material.</p></div><button class="btn btn-ghost" type="button" data-admin-refresh>Refresh</button></div><div data-review-root><div class="review-skeleton"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></div></section>
 
-    <section id="programs" class="dashboard-section" data-section="programs" hidden>
-      <div class="card section-card">
-        <div class="section-head">
-          <div><h2>Buat / Edit Program</h2><p class="muted">Program disimpan sebagai Draft. Setelah verifikasi disetujui, kirim program ke Review KIA.</p></div>
-          <button class="btn btn-ghost" type="button" data-program-reset>Form Baru</button>
-        </div>
-        <form id="programForm">
-          <input type="hidden" name="program_id">
-          <div class="form-grid">
-            <label class="field full">Nama Program<input name="program_name" maxlength="180" required></label>
-            <label class="field">Kategori<select name="category" required><option value="">Pilih kategori</option><option>Pendidikan</option><option>Kesehatan</option><option>Kemanusiaan</option><option>Masjid</option><option>Pesantren</option><option>Sosial</option><option>Bencana</option><option>Lainnya</option></select></label>
-            <label class="field">Target Dana<input name="target_amount" type="number" min="1000" step="1000" inputmode="numeric" required></label>
-            <label class="field">Tanggal Mulai<input name="start_date" type="date"></label>
-            <label class="field">Tanggal Selesai<input name="end_date" type="date"></label>
-            <label class="field full">Ringkasan<textarea name="short_description" maxlength="320" placeholder="Ringkasan singkat yang tampil di kartu program"></textarea></label>
-            <label class="field full">Cerita / Deskripsi<textarea name="description" maxlength="6000" placeholder="Jelaskan tujuan, kebutuhan, dan rencana penggunaan dana"></textarea></label>
-            <div class="field full program-cover-field">
-              <span>Cover Program</span>
-              <input type="hidden" name="cover_image_url">
-              <div class="media-upload-row">
-                <input type="file" accept="image/jpeg,image/png,image/webp" data-program-cover-file>
-                <button class="btn btn-soft" type="button" data-upload-program-cover>Impor Gambar</button>
-              </div>
-              <div class="program-cover-preview" data-program-cover-preview><span class="muted mini">Belum ada cover dipilih.</span></div>
-              <small class="muted">JPG/PNG/WEBP · otomatis dioptimalkan sebelum disimpan.</small>
-            </div>
-          </div>
-          <div class="form-actions"><button class="btn btn-primary" type="submit" data-program-save>Simpan Draft</button><button class="btn btn-ghost" type="button" data-program-reset>Reset</button></div>
-        </form>
-      </div>
-      <div class="card section-card" style="margin-top:16px">
-        <div class="section-head"><div><h2>Program Saya</h2><p class="muted">Tombol aksi menyesuaikan status program.</p></div></div>
-        <div class="program-list" data-program-list><div class="empty-state">Memuat program…</div></div>
-      </div>
-    </section>
+<section class="dashboard-section admin-only" data-section="cms" hidden><div class="card section-card"><div class="section-head"><div><h2>Hero & Media</h2><p class="muted">Tiga hero aktif. Gambar cukup diimpor, tanpa memasukkan URL manual.</p></div><button class="btn btn-ghost" type="button" data-media-refresh>Refresh Library</button></div><div class="hero-slot-tabs"><button class="hero-slot-btn is-active" type="button" data-hero-slot="1">Hero 1</button><button class="hero-slot-btn" type="button" data-hero-slot="2">Hero 2</button><button class="hero-slot-btn" type="button" data-hero-slot="3">Hero 3</button></div><div class="hero-preview" data-hero-preview><h3 data-hero-preview-title>Hero KIA</h3><p data-hero-preview-subtitle></p></div><form id="heroForm" style="margin-top:16px"><input type="hidden" name="slot" value="1"><input type="hidden" name="image_url"><div class="form-grid"><label class="field full">Headline<input name="title" maxlength="180" required></label><label class="field full">Subtitle<textarea name="subtitle" maxlength="500" required></textarea></label><label class="field">Label CTA<input name="cta_label" maxlength="80"></label><label class="field">URL CTA<input name="cta_url" maxlength="500"></label></div><div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Hero</button><label class="btn btn-soft" style="cursor:pointer"><span class="material-symbols-outlined">upload</span> Impor Gambar<input type="file" accept="image/jpeg,image/png,image/webp" data-hero-upload hidden></label></div></form><div class="media-grid" data-hero-media-grid style="margin-top:16px"><div class="skeleton skeleton-card"></div></div></div></section>
 
-    <section id="fundraise" class="dashboard-section" data-section="fundraise" hidden>
-      <div class="card section-card">
-        <span class="fundraise-badge">GALANG DANA</span><h2>Alur Penggalangan Dana KIA</h2>
-        <div class="notice" data-fundraise-state>Memuat status akun…</div><div class="divider"></div>
-        <p><strong>1.</strong> Akun aktif → <strong>2.</strong> Verifikasi identitas/yayasan → <strong>3.</strong> Buat Draft Program → <strong>4.</strong> Submit Review → <strong>5.</strong> Disetujui → <strong>6.</strong> Publikasikan.</p>
-        <div class="form-actions"><button class="btn btn-primary route-link" type="button" data-go="verification">Cek Verifikasi</button><button class="btn btn-soft route-link" type="button" data-go="programs" data-focus-program>Buat Program Sekarang</button></div>
-      </div>
-    </section>
+<section class="dashboard-section admin-only" data-section="settings" hidden><div class="card section-card"><div class="section-head"><div><h2>Pengaturan</h2><p class="muted">Pengaturan terstruktur seperti modul aplikasi profesional.</p></div></div>
+<div class="settings-view" data-settings-view="home"><div class="settings-shell">
+<div class="settings-group is-open"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">group</span><span class="settings-group__copy"><strong>Pengguna & Akses</strong><small>Manajemen akun, role, dan sinkronisasi.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-settings-open="users"><span class="material-symbols-outlined settings-subitem__icon">manage_accounts</span><span><strong>Manajemen Pengguna</strong><small>Search, filter role, pagination.</small></span><span class="material-symbols-outlined">chevron_right</span></button><button class="settings-subitem" data-sync-account><span class="material-symbols-outlined settings-subitem__icon">sync</span><span><strong>Sinkronkan Akses</strong><small>Ambil role terbaru tanpa logout.</small></span><span class="material-symbols-outlined">refresh</span></button></div></div>
+<div class="settings-group"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">fact_check</span><span class="settings-group__copy"><strong>Moderasi</strong><small>Review penggalang dan program.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-go="admin"><span class="material-symbols-outlined settings-subitem__icon">verified_user</span><span><strong>Review Admin</strong><small>Keputusan verifikasi dan program.</small></span><span class="material-symbols-outlined">chevron_right</span></button></div></div>
+<div class="settings-group"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">palette</span><span class="settings-group__copy"><strong>Konten & Tampilan</strong><small>Hero, FAQ, dan konten publik.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-go="cms"><span class="material-symbols-outlined settings-subitem__icon">collections</span><span><strong>Hero & Media</strong><small>Kelola visual hero.</small></span><span class="material-symbols-outlined">chevron_right</span></button><button class="settings-subitem" data-settings-open="faq"><span class="material-symbols-outlined settings-subitem__icon">quiz</span><span><strong>FAQ / Q&A</strong><small>Jawaban publik tentang keamanan, pembayaran, akun, dan donasi.</small></span><span class="material-symbols-outlined">chevron_right</span></button></div></div>
+<div class="settings-group"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">support_agent</span><span class="settings-group__copy"><strong>Kontak & Bantuan</strong><small>Kontak KIA dan jam layanan.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-settings-open="contact"><span class="material-symbols-outlined settings-subitem__icon">contact_support</span><span><strong>Kontak KIA</strong><small>WhatsApp, email, jam layanan.</small></span><span class="material-symbols-outlined">chevron_right</span></button></div></div>
+<div class="settings-group"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">security</span><span class="settings-group__copy"><strong>Keamanan</strong><small>Password dan session perangkat.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-settings-open="security"><span class="material-symbols-outlined settings-subitem__icon">password</span><span><strong>Keamanan Akun</strong><small>Ubah password dan keluar semua perangkat.</small></span><span class="material-symbols-outlined">chevron_right</span></button></div></div>
+<div class="settings-group"><button class="settings-group__head" data-settings-toggle><span class="material-symbols-outlined settings-group__icon">system_update</span><span class="settings-group__copy"><strong>Sistem & Informasi</strong><small>Versi aplikasi, changelog, update PWA.</small></span><span class="material-symbols-outlined settings-group__chevron">expand_more</span></button><div class="settings-group__body"><button class="settings-subitem" data-settings-open="about"><span class="material-symbols-outlined settings-subitem__icon">info</span><span><strong>Info Aplikasi</strong><small>Versi terpasang, versi terbaru, dan update.</small></span><span class="material-symbols-outlined">chevron_right</span></button></div></div>
+</div></div>
 
-    <section id="account" class="dashboard-section" data-section="account" hidden>
-      <div class="account-grid">
-        <div class="card section-card">
-          <div class="section-head"><div><h2>Akun Saya</h2><p class="muted">Identitas akun dan hak akses yang sedang aktif.</p></div></div>
-          <div class="account-profile">
-            <div class="account-avatar" data-account-initial>K</div>
-            <div><h3 data-account-name>Pengguna</h3><p class="muted" data-account-email>—</p></div>
-          </div>
-          <div class="notice admin-identity-note" data-admin-identity-note hidden><strong>Akun Platform Admin</strong><br><span>Jenis akun personal/yayasan tidak ditampilkan pada mode administrator.</span></div>
-          <div class="info-list">
-            <div data-user-account-type-row><span>Jenis Akun</span><strong data-account-type-text>—</strong></div>
-            <div><span>Platform Role</span><strong data-account-role-text>USER</strong></div>
-            <div data-user-org-role-row><span>Organisasi Role</span><strong data-org-role-text>—</strong></div>
-          </div>
-          <div class="account-tools">
-            <button class="btn btn-soft" type="button" data-sync-account>Sinkronkan Akses</button>
-            <button class="btn btn-danger" type="button" data-logout>Keluar dari Akun</button>
-          </div>
-        </div>
-        <div class="card section-card admin-only" data-admin-account-tools hidden>
-          <h2>Menu Admin</h2><p class="muted">Akses cepat sesuai role platform Anda.</p>
-          <div class="admin-quick-grid">
-            <button class="settings-link route-link" type="button" data-go="admin"><span>Review Admin</span><small>Verifikasi dan program yang menunggu review</small></button>
-            <button class="settings-link route-link" type="button" data-go="cms"><span>Hero & Media</span><small>Pilih gambar lama, impor gambar baru, dan atur tiga slide hero</small></button>
-            <button class="settings-link route-link" type="button" data-go="settings"><span>Setting Admin</span><small>Role pengguna dan informasi sistem</small></button>
-          </div>
-        </div>
-      </div>
-    </section>
+<div class="settings-view" data-settings-view="users" hidden><div class="settings-view-head"><button class="settings-back" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Manajemen Pengguna</h3><p class="muted mini">Data dimuat 8 pengguna per halaman.</p></div></div><div class="user-manager-toolbar"><input type="search" placeholder="Cari nama atau email…" data-user-search><select data-user-role-filter><option value="ALL">Semua Role</option><option>USER</option><option>PLATFORM_ADMIN</option><option>SUPER_ADMIN</option></select></div><div data-user-role-list><div class="skeleton skeleton-card"></div></div><div class="pagination"><button class="btn btn-ghost" data-user-prev>Sebelumnya</button><span class="muted mini" data-user-page-label>1 / 1</span><button class="btn btn-ghost" data-user-next>Berikutnya</button></div></div>
+<div class="settings-view" data-settings-view="faq" hidden><div class="settings-view-head"><button class="settings-back" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">FAQ / Q&A</h3><p class="muted mini">Konten kepercayaan publik.</p></div></div><form id="faqForm"><input type="hidden" name="faq_id"><div class="form-grid"><label class="field">Kategori<select name="category"><option>SECURITY</option><option>PAYMENT</option><option>ACCOUNT</option><option>DONATION</option><option>FUNDRAISING</option></select></label><label class="field">Urutan<input name="sort_order" type="number" value="99"></label><label class="field full">Pertanyaan<input name="question" required></label><label class="field full">Jawaban<textarea name="answer" required></textarea></label></div><div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Q&A</button><button class="btn btn-ghost" type="button" data-faq-reset>Bersihkan</button></div></form><div class="faq-list" data-faq-list style="margin-top:16px"></div></div>
+<div class="settings-view" data-settings-view="contact" hidden><div class="settings-view-head"><button class="settings-back" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Kontak KIA</h3><p class="muted mini">Ditampilkan di Pusat Bantuan publik.</p></div></div><form id="contactForm"><div class="form-grid"><label class="field">Nama Layanan<input name="support_name"></label><label class="field">WhatsApp<input name="contact_whatsapp" placeholder="62812..."></label><label class="field">Email<input name="contact_email" type="email"></label><label class="field">Jam Layanan<input name="support_hours"></label><label class="field full">URL Kebijakan Privasi<input name="privacy_url" type="url"></label><label class="field full">URL Syarat & Ketentuan<input name="terms_url" type="url"></label></div><div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Kontak</button></div></form></div>
+<div class="settings-view" data-settings-view="security" hidden><div class="settings-view-head"><button class="settings-back" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Keamanan Akun</h3><p class="muted mini">Password dan session aktif.</p></div></div><div class="security-grid"><form id="passwordForm" class="card" style="padding:16px"><h3>Ubah Password</h3><label class="field">Password Saat Ini<input type="password" name="current_password" required></label><label class="field" style="margin-top:10px">Password Baru<input type="password" name="new_password" minlength="10" required></label><div class="form-actions"><button class="btn btn-primary" type="submit">Ubah Password</button></div></form><div class="card" style="padding:16px"><h3>Session</h3><p class="muted">Keluar dari semua perangkat akan mencabut seluruh session aktif termasuk perangkat ini.</p><div data-session-list class="mini muted">Belum dimuat.</div><div class="form-actions"><button class="btn btn-danger" type="button" data-logout-all>Keluar Semua Perangkat</button></div></div></div></div>
+<div class="settings-view" data-settings-view="about" hidden><div class="settings-view-head"><button class="settings-back" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Info Aplikasi</h3><p class="muted mini">Versi, changelog, install, dan update PWA.</p></div></div><div class="system-info-list"><div><span>Nama Aplikasi</span><strong>KIA — Donasi Online</strong></div><div><span>Versi Terpasang</span><strong data-installed-version>v0.4.0</strong></div><div><span>Versi Terbaru</span><strong data-latest-version>Memeriksa…</strong></div><div><span>Status Update</span><strong data-update-status>—</strong></div><div><span>Founder</span><strong>Finance Tracker</strong></div></div><div class="form-actions"><button class="btn btn-primary" type="button" data-check-update>Cek Update</button><button class="btn btn-soft" type="button" data-apply-update hidden>Update Sekarang</button><button class="btn btn-ghost" type="button" data-install-pwa>Pasang Aplikasi KIA</button><a class="btn btn-ghost" href="./info.html" target="_blank">Lihat Changelog</a></div></div>
+</div></section>
 
-    <section id="admin" class="dashboard-section admin-only" data-section="admin" hidden>
-      <div class="card section-card">
-        <div class="section-head"><div><h2>Review Admin</h2><p class="muted">Hanya PLATFORM_ADMIN / SUPER_ADMIN.</p></div><button class="btn btn-ghost" type="button" data-admin-refresh>Refresh</button></div>
-        <h3>Verifikasi Perorangan</h3><div class="review-list" data-review-individual><div class="empty-state">Belum dimuat.</div></div><div class="divider"></div>
-        <h3>Verifikasi Yayasan</h3><div class="review-list" data-review-org><div class="empty-state">Belum dimuat.</div></div><div class="divider"></div>
-        <h3>Program Menunggu Review</h3><div class="review-list" data-review-program><div class="empty-state">Belum dimuat.</div></div>
-      </div>
-    </section>
+<section class="dashboard-section" data-section="account" hidden><div class="card section-card"><div class="section-head"><div><h2>Akun Saya</h2><p class="muted">Identitas dan hak akses aktif.</p></div></div><div class="system-info-list"><div><span>Nama</span><strong data-account-name>—</strong></div><div><span>Email</span><strong data-account-email>—</strong></div><div data-account-type-row><span>Jenis Akun</span><strong data-account-type>—</strong></div><div><span>Platform Role</span><strong data-account-role>USER</strong></div></div><div class="form-actions"><button class="btn btn-soft" type="button" data-sync-account>Sinkronkan Akses</button><button class="btn btn-danger" type="button" data-logout>Keluar dari Akun</button></div></div></section>
 
-    <section id="cms" class="dashboard-section admin-only" data-section="cms" hidden>
-      <div class="card section-card">
-        <div class="section-head"><div><h2>Hero & Media Landing Page</h2><p class="muted">Tiga slide aktif. Layout tetap LOCK; admin hanya mengubah konten.</p></div></div>
-        <div class="hero-slot-tabs" data-hero-slot-tabs>
-          <button class="hero-slot-btn is-active" type="button" data-hero-slot="1">Hero 1</button>
-          <button class="hero-slot-btn" type="button" data-hero-slot="2">Hero 2</button>
-          <button class="hero-slot-btn" type="button" data-hero-slot="3">Hero 3</button>
-        </div>
-        <div class="hero-preview" data-hero-preview><h3 data-hero-preview-title>Kebaikan yang terukur.</h3><p data-hero-preview-subtitle>Dampak yang terlihat.</p></div>
-        <form id="heroForm" style="margin-top:18px">
-          <input type="hidden" name="slot" value="1">
-          <div class="form-grid">
-            <label class="field full">Headline<input name="title" maxlength="180" required></label>
-            <label class="field full">Subtitle<textarea name="subtitle" maxlength="500" required></textarea></label>
-            <label class="field">Label CTA<input name="cta_label" maxlength="80" value="Mulai Berdonasi"></label>
-            <label class="field">URL CTA<input name="cta_url" maxlength="500" value="#program"></label>
-            <input type="hidden" name="image_url">
-            <div class="field full hero-media-panel card">
-              <strong>Gambar Hero</strong>
-              <p class="muted mini">Pilih gambar sebelumnya atau impor gambar baru. Tidak perlu menyalin link.</p>
-              <div class="media-upload-row">
-                <input type="file" accept="image/jpeg,image/png,image/webp" data-hero-file>
-                <button class="btn btn-soft" type="button" data-upload-hero-media>Impor Gambar</button>
-                <button class="btn btn-ghost" type="button" data-refresh-media>Refresh Library</button>
-              </div>
-              <div class="media-library" data-media-library></div>
-            </div>
-          </div>
-          <div class="form-actions"><button class="btn btn-primary" type="submit">Simpan Hero Aktif</button><a class="btn btn-ghost" href="./" target="_blank" rel="noopener">Preview Landing</a></div>
-        </form>
-      </div>
-    </section>
-
-    <section id="settings" class="dashboard-section admin-only" data-section="settings" hidden>
-      <div class="card section-card">
-        <div class="section-head settings-intro">
-          <div><h2>Pengaturan</h2><p class="muted">Kelola akses, konten, sistem, dan informasi KIA dari menu yang terstruktur.</p></div>
-          <button class="btn btn-ghost" type="button" data-settings-refresh>Refresh</button>
-        </div>
-
-        <div class="settings-view" data-settings-view="home">
-          <div class="settings-shell" data-settings-groups>
-            <div class="settings-group is-open">
-              <button class="settings-group__head" type="button" data-settings-toggle>
-                <span class="material-symbols-outlined settings-group__icon">group</span>
-                <span class="settings-group__copy"><strong>Pengguna & Akses</strong><small>Kelola akun, role, dan sinkronisasi akses.</small></span>
-                <span class="settings-group__count">3 Menu</span>
-                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
-              </button>
-              <div class="settings-group__body">
-                <button class="settings-subitem" type="button" data-settings-open="users"><span class="material-symbols-outlined settings-subitem__icon">manage_accounts</span><span><strong>Manajemen Pengguna</strong><small>Cari pengguna, filter role, dan ubah hak akses tanpa daftar panjang.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-                <button class="settings-subitem" type="button" data-settings-open="roles"><span class="material-symbols-outlined settings-subitem__icon">admin_panel_settings</span><span><strong>Peran & Hak Akses</strong><small>Lihat fungsi USER, PLATFORM_ADMIN, dan SUPER_ADMIN.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-                <button class="settings-subitem" type="button" data-sync-account><span class="material-symbols-outlined settings-subitem__icon">sync</span><span><strong>Sinkronkan Akses</strong><small>Ambil role dan data akses terbaru tanpa keluar dari akun.</small></span><span class="material-symbols-outlined">refresh</span></button>
-              </div>
-            </div>
-
-            <div class="settings-group">
-              <button class="settings-group__head" type="button" data-settings-toggle>
-                <span class="material-symbols-outlined settings-group__icon">fact_check</span>
-                <span class="settings-group__copy"><strong>Moderasi</strong><small>Review verifikasi penggalang dana dan program.</small></span>
-                <span class="settings-group__count">1 Menu</span>
-                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
-              </button>
-              <div class="settings-group__body">
-                <button class="settings-subitem route-link" type="button" data-go="admin"><span class="material-symbols-outlined settings-subitem__icon">verified_user</span><span><strong>Review Admin</strong><small>Proses verifikasi akun dan program yang menunggu persetujuan.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-              </div>
-            </div>
-
-            <div class="settings-group">
-              <button class="settings-group__head" type="button" data-settings-toggle>
-                <span class="material-symbols-outlined settings-group__icon">palette</span>
-                <span class="settings-group__copy"><strong>Konten & Tampilan</strong><small>Kelola visual publik tanpa mengubah layout utama.</small></span>
-                <span class="settings-group__count">1 Menu</span>
-                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
-              </button>
-              <div class="settings-group__body">
-                <button class="settings-subitem route-link" type="button" data-go="cms"><span class="material-symbols-outlined settings-subitem__icon">collections</span><span><strong>Hero & Media</strong><small>Pilih gambar lama, impor media baru, dan atur tiga slide hero.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-              </div>
-            </div>
-
-            <div class="settings-group">
-              <button class="settings-group__head" type="button" data-settings-toggle>
-                <span class="material-symbols-outlined settings-group__icon">settings</span>
-                <span class="settings-group__copy"><strong>Sistem</strong><small>Status aplikasi, versi, dan koneksi akun.</small></span>
-                <span class="settings-group__count">1 Menu</span>
-                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
-              </button>
-              <div class="settings-group__body">
-                <button class="settings-subitem" type="button" data-settings-open="system"><span class="material-symbols-outlined settings-subitem__icon">monitor_heart</span><span><strong>Status Sistem</strong><small>Versi backend, role aktif, dan identitas platform.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-              </div>
-            </div>
-
-            <div class="settings-group">
-              <button class="settings-group__head" type="button" data-settings-toggle>
-                <span class="material-symbols-outlined settings-group__icon">info</span>
-                <span class="settings-group__copy"><strong>Informasi</strong><small>Tentang aplikasi dan identitas produk.</small></span>
-                <span class="settings-group__count">1 Menu</span>
-                <span class="material-symbols-outlined settings-group__chevron">expand_more</span>
-              </button>
-              <div class="settings-group__body">
-                <button class="settings-subitem" type="button" data-settings-open="about"><span class="material-symbols-outlined settings-subitem__icon">info</span><span><strong>Tentang KIA</strong><small>Informasi produk, founder, arsitektur, dan versi.</small></span><span class="material-symbols-outlined">chevron_right</span></button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-view" data-settings-view="users" hidden>
-          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Manajemen Pengguna</h3><p class="muted mini" style="margin:3px 0 0">Cari dan kelola role pengguna.</p></div></div>
-          <div class="notice" data-role-management-note>Memuat hak akses…</div>
-          <div class="user-manager-toolbar">
-            <input type="search" placeholder="Cari nama atau email…" data-user-search>
-            <select data-user-role-filter><option value="ALL">Semua Role</option><option value="USER">USER</option><option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option><option value="SUPER_ADMIN">SUPER_ADMIN</option></select>
-          </div>
-          <div class="user-manager-meta"><span data-user-result-meta>Belum dimuat.</span><button class="btn btn-ghost" type="button" data-users-refresh>Refresh</button></div>
-          <div class="user-role-list compact" data-user-role-list><div class="empty-state">Buka menu ini untuk memuat pengguna.</div></div>
-          <div class="user-role-pagination" data-user-pagination hidden><button class="btn btn-ghost" type="button" data-user-page-prev>Sebelumnya</button><span class="mini muted" data-user-page-label>1 / 1</span><button class="btn btn-ghost" type="button" data-user-page-next>Berikutnya</button></div>
-        </div>
-
-        <div class="settings-view" data-settings-view="roles" hidden>
-          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Peran & Hak Akses</h3><p class="muted mini" style="margin:3px 0 0">Struktur akses platform KIA.</p></div></div>
-          <div class="role-guide">
-            <div class="role-guide-item"><span class="material-symbols-outlined">person</span><div><strong>USER</strong><p>Akun pengguna biasa untuk donasi, verifikasi, dan pengelolaan program miliknya.</p></div></div>
-            <div class="role-guide-item"><span class="material-symbols-outlined">shield_person</span><div><strong>PLATFORM_ADMIN</strong><p>Dapat melakukan review verifikasi/program dan mengelola Hero & Media.</p></div></div>
-            <div class="role-guide-item"><span class="material-symbols-outlined">admin_panel_settings</span><div><strong>SUPER_ADMIN</strong><p>Memiliki akses admin penuh termasuk mengubah role platform pengguna lain.</p></div></div>
-          </div>
-        </div>
-
-        <div class="settings-view" data-settings-view="system" hidden>
-          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Status Sistem</h3><p class="muted mini" style="margin:3px 0 0">Informasi aplikasi yang sedang aktif.</p></div></div>
-          <div class="system-info-list"><div><span>Role Aktif</span><strong data-settings-current-role>—</strong></div><div><span>Versi Backend</span><strong data-settings-version>—</strong></div><div><span>Platform</span><strong>KIA — Donasi Online</strong></div><div><span>Founder</span><strong>Finance Tracker</strong></div><div><span>Database MVP</span><strong>Google Spreadsheet</strong></div></div>
-        </div>
-
-        <div class="settings-view" data-settings-view="about" hidden>
-          <div class="settings-view-head"><button class="settings-back" type="button" data-settings-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Tentang KIA</h3><p class="muted mini" style="margin:3px 0 0">Informasi produk dan platform.</p></div></div>
-          <div class="system-info-list"><div><span>Nama Aplikasi</span><strong>KIA — Donasi Online</strong></div><div><span>Parent Brand</span><strong>Finance Tracker</strong></div><div><span>Fokus</span><strong>Donasi & Penggalangan Dana</strong></div><div><span>Frontend</span><strong>GitHub Pages + PWA</strong></div><div><span>Backend</span><strong>Render + Apps Script Gateway</strong></div></div>
-        </div>
-      </div>
-    </section>
-
-    <div class="kia-founder">KIA — Donasi Online · <strong>Founded by Finance Tracker</strong></div>
-  </main>
-
-  <nav class="mobile-bottom-nav app-mobile-nav" aria-label="Navigasi dashboard mobile">
-    <a class="mobile-nav-item" href="#home" data-mobile-route="home"><span class="material-symbols-outlined mobile-nav-icon">home</span><span>Beranda</span></a>
-    <a class="mobile-nav-item" href="#programs" data-mobile-route="programs"><span class="material-symbols-outlined mobile-nav-icon">grid_view</span><span>Program</span></a>
-    <a class="mobile-nav-item mobile-nav-cta" href="#fundraise" data-mobile-route="fundraise"><span class="diamond-cta"><span class="material-symbols-outlined diamond-glyph">volunteer_activism</span></span><span>Galang</span></a>
-    <a class="mobile-nav-item" href="#verification" data-mobile-route="verification"><span class="material-symbols-outlined mobile-nav-icon">verified</span><span>Verifikasi</span></a>
-    <a class="mobile-nav-item" href="#account" data-mobile-route="account"><span class="material-symbols-outlined mobile-nav-icon">account_circle</span><span>Akun</span></a>
-  </nav>
-
-  <script src="./assets/js/config.js"></script>
-  <script src="./assets/js/ui.js"></script>
-  <script src="./assets/js/auth.js"></script>
-  <script src="./assets/js/dashboard-v037.js"></script>
-  <script src="./assets/js/pwa.js"></script>
-</body>
-</html>
+<div class="kia-founder">KIA — Donasi Online · <strong>Founded by Finance Tracker</strong></div>
+</main>
+<nav class="app-mobile-nav" aria-label="Navigasi dashboard mobile"><a class="mobile-nav-item" href="#home" data-mobile-route="home"><span class="material-symbols-outlined mobile-nav-icon">home</span><span>Beranda</span></a><a class="mobile-nav-item" href="#programs" data-mobile-route="programs"><span class="material-symbols-outlined mobile-nav-icon">grid_view</span><span>Program</span></a><a class="mobile-nav-item mobile-nav-cta" href="#programs" data-mobile-create><span class="diamond-cta"><span class="material-symbols-outlined diamond-glyph">volunteer_activism</span></span><span>Galang</span></a><a class="mobile-nav-item" href="#verification" data-mobile-route="verification"><span class="material-symbols-outlined mobile-nav-icon">verified</span><span>Verifikasi</span></a><a class="mobile-nav-item" href="#account" data-mobile-route="account"><span class="material-symbols-outlined mobile-nav-icon">account_circle</span><span>Akun</span></a></nav>
+<script src="./assets/js/config.js"></script><script src="./assets/js/ui.js"></script><script src="./assets/js/auth.js"></script><script src="./assets/js/pwa-v040.js"></script><script src="./assets/js/dashboard-v040.js"></script></body></html>
