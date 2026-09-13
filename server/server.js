@@ -66,8 +66,10 @@ async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
   const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast']);
   const isRead=readActions.has(action);
-  const attempts=isRead?2:1; // WRITE tidak di-retry: cegah duplicate + delay ganda.
-  const timeout=Number(opts.timeout)|| (isRead?9000:15000);
+  const attempts=Number.isFinite(Number(opts.attempts))
+    ? Math.max(1, Number(opts.attempts))
+    : (isRead ? 2 : 1); // WRITE default tetap tidak di-retry.
+  const timeout=Number(opts.timeout)|| (isRead?12000:18000);
   const body=JSON.stringify({action,gateway_secret:GATEWAY_SECRET,...payload});
   let lastError=null;
   for(let attempt=1;attempt<=attempts;attempt++){
@@ -120,7 +122,7 @@ async function saveSession(req,userId){
       created_at:now,
       revoked_at:''
     }
-  });
+  },{timeout:30000,attempts:1});
 
   return {
     token,
@@ -136,7 +138,7 @@ async function sessionUser(req){
   if(cached&&cached.expires>Date.now()) return cached.user;
   if(cached) sessionCache.delete(key);
 
-  const resolved=await gas('resolveSession',{token_hash:key});
+  const resolved=await gas('resolveSession',{token_hash:key},{timeout:30000,attempts:1});
   if(!resolved?.user) return null;
   sessionCache.set(key,{user:resolved.user,expires:Date.now()+SESSION_CACHE_TTL});
   return resolved.user;
@@ -146,7 +148,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.4.0'
+    version:'0.4.1'
   }
 }));
 
@@ -179,7 +181,7 @@ app.post('/api/auth/register',async(req,res)=>{
       });
     }
 
-    if(await gas('findOne',{sheet:'01_USERS',filters:{email}})){
+    if(await gas('findOne',{sheet:'01_USERS',filters:{email}},{timeout:30000,attempts:1})){
       return res.status(409).json({
         success:false,
         message:'Email sudah terdaftar.'
@@ -303,7 +305,7 @@ app.post('/api/auth/login',async(req,res)=>{
         email,
         status:'ACTIVE'
       }
-    });
+    },{timeout:30000,attempts:1});
 
     if(!u||!verifyPassword(req.body.password,u.password_hash)){
       return res.status(401).json({
@@ -453,7 +455,7 @@ async function applyBootstrapAdmin(user){
   const configured=String(process.env.KIA_SUPER_ADMIN_EMAIL||'').trim().toLowerCase();
   if(!configured||!user||String(user.email||'').trim().toLowerCase()!==configured||user.platform_role==='SUPER_ADMIN') return user;
   const patch={platform_role:'SUPER_ADMIN',updated_at:new Date().toISOString()};
-  await gas('update',{sheet:'01_USERS',idField:'user_id',id:user.user_id,patch});
+  await gas('update',{sheet:'01_USERS',idField:'user_id',id:user.user_id,patch},{timeout:30000,attempts:1});
   const nextUser={...user,...patch};
   refreshCachedUser(nextUser);
   console.log('KIA_BOOTSTRAP_SUPER_ADMIN',user.email);
@@ -845,7 +847,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.4.0'
+          version:'0.4.1'
         }
       }
     });
