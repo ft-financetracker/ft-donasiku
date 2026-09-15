@@ -1,6 +1,6 @@
 window.KiaPWA = (() => {
-  const FALLBACK_VERSION = '0.5.1';
-  const FALLBACK_BUILD = 51;
+  const FALLBACK_VERSION = '0.5.2';
+  const FALLBACK_BUILD = 52;
 
   let deferredInstall = window.__KIA_PWA_INSTALL_PROMPT__ || null;
   let registration = null;

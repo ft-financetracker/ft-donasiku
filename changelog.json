@@ -1,5 +1,28 @@
 [
   {
+    "version": "0.5.2",
+    "date": "2026-09-15",
+    "title": "Stable Performance & Payment Recovery Patch",
+    "new": [
+      "Payment Status menyediakan Ganti Metode Pembayaran tanpa membuat Donation baru",
+      "DOKU notification endpoint memiliki health/probe response untuk validasi URL Back Office"
+    ],
+    "improvements": [
+      "Semua Program langsung memakai cache/seed dari Landing bila tersedia lalu refresh di background",
+      "Public catalog melakukan retry otomatis untuk request GET yang aman sebelum menampilkan error",
+      "Versioning frontend, Service Worker, Info Aplikasi, dan backend disinkronkan ke v0.5.2 Build 52"
+    ],
+    "fixes": [
+      "Mengurangi first-load katalog yang berakhir gagal lalu baru berhasil setelah F5",
+      "Memperbaiki kondisi user terjebak pada satu payment attempt saat ingin mengganti QRIS atau Virtual Account",
+      "Mencegah progress program terhitung dua kali bila dua payment attempt untuk Donation yang sama sama-sama dibayar"
+    ],
+    "security": [
+      "POST notification transaksi DOKU tetap wajib signature; endpoint probe tidak memproses transaksi",
+      "Ganti metode memakai signed checkout token sehingga tidak membutuhkan login untuk guest donor"
+    ]
+  },
+  {
     "version": "0.5.1",
     "date": "2026-09-15",
     "title": "Fast Public, DOKU Sandbox & Dampak Saya",
