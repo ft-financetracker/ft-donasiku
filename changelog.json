@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.4.4",
+    "date": "2026-09-15",
+    "title": "Info Aplikasi & PWA Install Hotfix",
+    "new": [],
+    "improvements": [
+      "Tombol Pasang Aplikasi KIA menunggu dan menangkap prompt instalasi browser dengan lebih andal",
+      "Status instalasi pada Info Aplikasi diperjelas tanpa mengubah modul lain"
+    ],
+    "fixes": [
+      "Tombol Update Sekarang benar-benar disembunyikan saat versi terpasang sudah sama dengan versi terbaru",
+      "Memperbaiki konflik CSS tombol yang sebelumnya membuat atribut hidden tetap terlihat",
+      "Memperbaiki kondisi tombol instalasi dapat ditekan sebelum browser selesai menyiapkan prompt PWA"
+    ]
+  },
+  {
     "version": "0.4.3",
     "date": "2026-09-15",
     "title": "Update Center Stabil",

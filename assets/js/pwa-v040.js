@@ -1,8 +1,10 @@
 window.KiaPWA = (() => {
-  const FALLBACK_VERSION = '0.4.3';
-  const FALLBACK_BUILD = 43;
-  let deferredInstall = null;
+  const FALLBACK_VERSION = '0.4.4';
+  const FALLBACK_BUILD = 44;
+
+  let deferredInstall = window.__KIA_PWA_INSTALL_PROMPT__ || null;
   let registration = null;
+  let installWaiters = [];
 
   const isStandalone = () =>
     window.matchMedia('(display-mode: standalone)').matches ||
@@ -12,17 +14,65 @@ window.KiaPWA = (() => {
     const aa = String(a || '0').split('.').map(x => Number(x) || 0);
     const bb = String(b || '0').split('.').map(x => Number(x) || 0);
     const len = Math.max(aa.length, bb.length);
+
     for (let i = 0; i < len; i++) {
       const av = aa[i] || 0;
       const bv = bb[i] || 0;
       if (av > bv) return 1;
       if (av < bv) return -1;
     }
+
     return 0;
   }
 
   function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function rememberInstallPrompt(event) {
+    if (!event) return;
+    try { event.preventDefault(); } catch (_) {}
+
+    deferredInstall = event;
+    window.__KIA_PWA_INSTALL_PROMPT__ = event;
+
+    const waiters = installWaiters;
+    installWaiters = [];
+    waiters.forEach(resolve => resolve(event));
+
+    window.dispatchEvent(new CustomEvent('kia:pwa-install-ready'));
+  }
+
+  function currentInstallPrompt() {
+    if (!deferredInstall && window.__KIA_PWA_INSTALL_PROMPT__) {
+      deferredInstall = window.__KIA_PWA_INSTALL_PROMPT__;
+    }
+    return deferredInstall;
+  }
+
+  function canInstall() {
+    return !isStandalone() && !!currentInstallPrompt();
+  }
+
+  function waitForInstallPrompt(timeout = 2200) {
+    const current = currentInstallPrompt();
+    if (current) return Promise.resolve(current);
+
+    return new Promise(resolve => {
+      let done = false;
+      const finish = value => {
+        if (done) return;
+        done = true;
+        resolve(value || null);
+      };
+
+      installWaiters.push(finish);
+
+      setTimeout(() => {
+        installWaiters = installWaiters.filter(item => item !== finish);
+        finish(currentInstallPrompt());
+      }, timeout);
+    });
   }
 
   function getRegistration() {
@@ -74,14 +124,11 @@ window.KiaPWA = (() => {
     };
   }
 
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();
-    deferredInstall = event;
-    window.dispatchEvent(new CustomEvent('kia:pwa-install-ready'));
-  });
+  window.addEventListener('beforeinstallprompt', rememberInstallPrompt);
 
   window.addEventListener('appinstalled', () => {
     deferredInstall = null;
+    window.__KIA_PWA_INSTALL_PROMPT__ = null;
     window.dispatchEvent(new CustomEvent('kia:pwa-installed'));
   });
 
@@ -101,18 +148,32 @@ window.KiaPWA = (() => {
       return { installed: true, already: true };
     }
 
-    if (!deferredInstall) {
+    const promptEvent = currentInstallPrompt() || await waitForInstallPrompt();
+
+    if (!promptEvent) {
       return { installed: false, reason: 'PROMPT_UNAVAILABLE' };
     }
 
-    deferredInstall.prompt();
-    const choice = await deferredInstall.userChoice;
-    deferredInstall = null;
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
 
-    return {
-      installed: choice.outcome === 'accepted',
-      choice: choice.outcome
-    };
+      deferredInstall = null;
+      window.__KIA_PWA_INSTALL_PROMPT__ = null;
+
+      return {
+        installed: choice.outcome === 'accepted',
+        choice: choice.outcome
+      };
+    } catch (error) {
+      deferredInstall = null;
+      window.__KIA_PWA_INSTALL_PROMPT__ = null;
+      return {
+        installed: false,
+        reason: 'PROMPT_FAILED',
+        error: error?.message || 'INSTALL_PROMPT_FAILED'
+      };
+    }
   }
 
   async function latestRelease() {
@@ -136,14 +197,18 @@ window.KiaPWA = (() => {
       ]);
 
       const latestVersion = String(latest.version || installed.version);
-      const updateAvailable = compareVersion(latestVersion, installed.version) > 0;
+      const latestBuild = Number(latest.build || 0);
+      const versionAhead = compareVersion(latestVersion, installed.version) > 0;
+      const sameVersionNewerBuild =
+        compareVersion(latestVersion, installed.version) === 0 &&
+        latestBuild > Number(installed.build || 0);
 
       return {
         installed: installed.version,
         installedBuild: installed.build,
         latest: latestVersion,
-        latestBuild: Number(latest.build || 0),
-        updateAvailable,
+        latestBuild,
+        updateAvailable: versionAhead || sameVersionNewerBuild,
         required: !!latest.required_update,
         release: latest,
         source: installed.source
@@ -247,7 +312,6 @@ window.KiaPWA = (() => {
     let worker = reg.waiting || await waitForInstalling(reg);
 
     if (!worker) {
-      // GitHub Pages / CDN kadang belum menyajikan service-worker baru pada detik yang sama.
       await wait(1200);
       await reg.update();
       worker = reg.waiting || await waitForInstalling(reg);
@@ -276,6 +340,8 @@ window.KiaPWA = (() => {
     currentVersion: FALLBACK_VERSION,
     currentBuild: FALLBACK_BUILD,
     isStandalone,
+    canInstall,
+    waitForInstallPrompt,
     install,
     installedRelease,
     checkUpdate,

@@ -1,6 +1,6 @@
-const APP_VERSION='0.4.3';
-const APP_BUILD=43;
-const CACHE='kia-v0.4.3';
+const APP_VERSION='0.4.4';
+const APP_BUILD=44;
+const CACHE='kia-v0.4.4';
 const SHELL=[
   './','./index.html','./login.html','./register.html','./app.html','./program.html','./programs.html','./help.html','./info.html','./offline.html',
   './manifest-v040.json','./manifest.json','./app-version.json','./changelog.json',

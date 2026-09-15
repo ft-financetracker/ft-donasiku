@@ -16,6 +16,12 @@
     if (el) el.textContent = value;
   }
 
+  function setVisible(element, visible) {
+    if (!element) return;
+    element.hidden = !visible;
+    element.style.display = visible ? '' : 'none';
+  }
+
   function setUpdateBadge(type, text) {
     const el = $('[data-update-status]');
     if (!el) return;
@@ -28,6 +34,28 @@
     button.disabled = !!busy;
     if (label) {
       button.innerHTML = `${icon?`<span class="material-symbols-outlined">${icon}</span>`:''}<span>${esc(label)}</span>`;
+    }
+  }
+
+  function renderInstallState() {
+    const button = $('[data-install-pwa]');
+    if (!button) return;
+
+    if (KiaPWA.isStandalone()) {
+      setVisible(button, false);
+      setText('[data-install-status]', 'KIA sudah terpasang sebagai aplikasi di perangkat ini.');
+      return;
+    }
+
+    setVisible(button, true);
+    button.disabled = false;
+
+    if (KiaPWA.canInstall()) {
+      setButtonBusy(button, false, 'Pasang Aplikasi KIA', 'install_mobile');
+      setText('[data-install-status]', 'KIA siap dipasang. Tekan tombol Pasang Aplikasi KIA.');
+    } else {
+      setButtonBusy(button, false, 'Pasang Aplikasi KIA', 'install_mobile');
+      setText('[data-install-status]', 'Menunggu izin instalasi dari browser. Jika prompt tidak muncul, gunakan menu browser → Install app / Tambahkan ke layar utama.');
     }
   }
 
@@ -51,28 +79,19 @@
 
     if (result.error) {
       setUpdateBadge('is-error', 'Pemeriksaan gagal');
-      if (applyButton) applyButton.hidden = true;
+      setVisible(applyButton, false);
       setText('[data-update-note]', 'Tidak dapat memeriksa versi terbaru. Coba lagi beberapa saat.');
     } else if (result.updateAvailable) {
       setUpdateBadge('is-update', 'Update tersedia');
-      if (applyButton) applyButton.hidden = false;
+      setVisible(applyButton, true);
       setText('[data-update-note]', `Versi ${latest} siap dipasang. Session dan data akun tidak akan dihapus.`);
     } else {
       setUpdateBadge('is-current', 'Sudah terbaru');
-      if (applyButton) applyButton.hidden = true;
+      setVisible(applyButton, false);
       setText('[data-update-note]', 'KIA yang digunakan saat ini sudah sama dengan versi rilis terbaru.');
     }
 
-    const standalone = KiaPWA.isStandalone();
-    const installButton = $('[data-install-pwa]');
-
-    if (installButton) installButton.hidden = standalone;
-    setText(
-      '[data-install-status]',
-      standalone
-        ? 'KIA terpasang sebagai PWA di perangkat ini.'
-        : 'KIA sedang dibuka melalui browser. Anda dapat memasangnya seperti aplikasi.'
-    );
+    renderInstallState();
 
     if (manual) {
       setButtonBusy(checkButton, false, 'Cek Update', 'refresh');
@@ -177,7 +196,7 @@
         setButtonBusy(button, false, 'Coba Update Lagi', 'system_update_alt');
         if (checkButton) checkButton.disabled = false;
       } else if (result?.reason === 'UP_TO_DATE') {
-        setButtonBusy(button, false, 'Update Sekarang', 'system_update_alt');
+        setVisible(button, false);
         if (checkButton) checkButton.disabled = false;
         await refreshVersion();
       }
@@ -190,24 +209,31 @@
 
   async function installPwa() {
     const button = $('[data-install-pwa]');
-    setButtonBusy(button, true, 'Menyiapkan…', 'install_mobile');
+    setButtonBusy(button, true, 'Menyiapkan instalasi…', 'install_mobile');
+    setText('[data-install-status]', 'Meminta izin instalasi dari browser…');
 
     const result = await KiaPWA.install();
 
     if (result?.already) {
-      button.hidden = true;
-      setText('[data-install-status]', 'KIA terpasang sebagai PWA di perangkat ini.');
+      setVisible(button, false);
+      setText('[data-install-status]', 'KIA sudah terpasang sebagai aplikasi di perangkat ini.');
       return;
     }
 
     if (result?.installed) {
-      button.hidden = true;
-      setText('[data-install-status]', 'Instalasi KIA dimulai. Ikuti petunjuk perangkat jika muncul.');
+      setVisible(button, false);
+      setText('[data-install-status]', 'Instalasi KIA diterima. Aplikasi akan tersedia di perangkat Anda.');
       return;
     }
 
     setButtonBusy(button, false, 'Pasang Aplikasi KIA', 'install_mobile');
-    setText('[data-install-status]', 'Prompt instalasi otomatis belum tersedia. Gunakan menu browser → Install app / Tambahkan ke layar utama.');
+
+    if (result?.choice === 'dismissed') {
+      setText('[data-install-status]', 'Instalasi dibatalkan. Tekan Pasang Aplikasi KIA jika ingin mencoba lagi.');
+      return;
+    }
+
+    setText('[data-install-status]', 'Browser belum memberikan prompt instalasi otomatis. Gunakan menu browser → Install app / Tambahkan ke layar utama.');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -215,9 +241,16 @@
     $('[data-apply-update]')?.addEventListener('click', applyUpdate);
     $('[data-install-pwa]')?.addEventListener('click', installPwa);
 
-    window.addEventListener('kia:pwa-installed', () => refreshVersion());
+    window.addEventListener('kia:pwa-install-ready', renderInstallState);
+    window.addEventListener('kia:pwa-installed', () => {
+      renderInstallState();
+      refreshVersion();
+    });
 
     refreshVersion();
     loadChangelog();
+
+    setTimeout(renderInstallState, 600);
+    setTimeout(renderInstallState, 1800);
   });
 })();
