@@ -356,7 +356,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.5.1'
+    version:'0.5.2'
   }
 }));
 
@@ -676,7 +676,7 @@ function sendError(res,e){
     PROGRAM_MEDIA_NOT_FOUND:404,PROGRAM_UPDATE_NOT_FOUND:404,DONATION_NOT_FOUND:404,PAYMENT_NOT_FOUND:404,REVISION_NOT_FOUND:404,
     INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INCOMPLETE_PROGRAM_UPDATE:400,INVALID_MEDIA_TYPE:400,INVALID_DONATION_AMOUNT:400,INVALID_PAYMENT_METHOD:400,INVALID_CHECKOUT_TOKEN:401,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
-    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,
+    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,DONATION_ALREADY_PAID:409,PAYMENT_ATTEMPT_LIMIT:429,
     GATEWAY_TIMEOUT:504,WRITE_BUSY:503
   };
   const friendly={
@@ -688,6 +688,7 @@ function sendError(res,e){
     REVISION_NOT_PENDING:'Revisi ini sudah diproses.',
     INVALID_DONATION_AMOUNT:'Nominal donasi minimal Rp1.000.',
     INVALID_PAYMENT_METHOD:'Metode pembayaran belum didukung.',
+    DONATION_ALREADY_PAID:'Donasi ini sudah dibayar.',PAYMENT_ATTEMPT_LIMIT:'Batas percobaan metode pembayaran telah tercapai. Silakan buat donasi baru jika masih diperlukan.',
     INVALID_CHECKOUT_TOKEN:'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.',
     INCOMPLETE_PROGRAM_UPDATE:'Judul dan isi perkembangan wajib diisi.'
   };
@@ -1050,6 +1051,86 @@ app.post('/api/donations/checkout',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
+app.post('/api/payments/retry',async(req,res)=>{
+  try{
+    const token=verifyCheckoutViewToken(req.body?.token);
+    if(!token) throw httpError(401,'Tautan pembayaran tidak valid atau sudah kedaluwarsa.','INVALID_CHECKOUT_TOKEN');
+    const payment_method=text(req.body?.payment_method,40).toUpperCase();
+    if(!['QRIS','VIRTUAL_ACCOUNT'].includes(payment_method)) throw httpError(400,'Metode pembayaran belum didukung.','INVALID_PAYMENT_METHOD');
+
+    const current=await gas('publicPaymentStatusFast',{donation_id:token.donation_id,payment_id:token.payment_id},{timeout:12000,attempts:1});
+    if(String(current?.donation?.status||'').toUpperCase()==='PAID') throw httpError(409,'Donasi ini sudah dibayar.','DONATION_ALREADY_PAID');
+
+    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:token.donation_id}},{timeout:10000,attempts:1});
+    if(!donation) throw httpError(404,'Donasi tidak ditemukan.','DONATION_NOT_FOUND');
+
+    const now=new Date().toISOString();
+    const payment_id=id('pay');
+    const suffix=Date.now().toString(36).toUpperCase().slice(-8);
+    const provider_invoice_number=`${String(donation.donation_code||'KIA').replace(/[^A-Za-z0-9]/g,'').slice(0,46)}A${suffix}`.slice(0,60);
+    const payment_row={
+      payment_id,
+      donation_id:donation.donation_id,
+      attempt_no:0,
+      provider:'DOKU',
+      payment_method,
+      payment_channel:payment_method==='QRIS'?'QRIS':'VA_CHECKOUT',
+      requested_amount:Number(donation.gross_amount)||0,
+      fee_amount:0,
+      paid_amount:0,
+      provider_reference:'',
+      provider_invoice_number,
+      payment_url:'',
+      va_number:'',
+      qr_data:'',
+      status:'CREATED',
+      expired_at:'',
+      paid_at:'',
+      created_at:now,
+      updated_at:now
+    };
+
+    const createdAttempt=await gas('createPaymentAttemptFast',{donation_id:donation.donation_id,payment_row},{timeout:15000,attempts:1});
+    const view_token=signCheckoutViewToken({donation_id:donation.donation_id,payment_id,exp:Date.now()+7*864e5});
+    const callbackUrl=`${PUBLIC_APP_URL}/payment.html?token=${encodeURIComponent(view_token)}`;
+    let provider={ready:false,reason:dokuConfigured()?'DOKU_CREATE_PENDING':'DOKU_NOT_CONFIGURED'};
+
+    if(dokuConfigured()){
+      try{
+        const checkout=await dokuCreateCheckout({
+          invoice:provider_invoice_number,
+          amount:Number(donation.gross_amount)||0,
+          paymentMethod:payment_method,
+          donor:{id:donation.user_id||donation.donation_id,name:donation.donor_name,email:donation.donor_email,phone:donation.donor_phone},
+          callbackUrl
+        });
+        const patch={
+          provider_reference:checkout.requestId,
+          provider_invoice_number,
+          payment_url:checkout.paymentUrl,
+          status:'PENDING',
+          expired_at:checkout.expiredAt,
+          updated_at:new Date().toISOString(),
+          payment_channel:payment_method==='QRIS'?'QRIS':'DOKU_CHECKOUT_VA'
+        };
+        await gas('updatePaymentProviderFast',{payment_id,donation_id:donation.donation_id,patch},{timeout:12000,attempts:1});
+        provider={ready:true,payment_url:checkout.paymentUrl,expired_at:checkout.expiredAt,request_id:checkout.requestId};
+      }catch(err){
+        console.error('DOKU_RETRY_CREATE_FAILED',err.message);
+        provider={ready:false,reason:'DOKU_CREATE_FAILED'};
+      }
+    }
+
+    res.status(201).json({success:true,data:{
+      donation:createdAttempt.donation,
+      payment:{...createdAttempt.payment,status:provider.ready?'PENDING':'CREATED',payment_url:provider.payment_url||'',expired_at:provider.expired_at||''},
+      provider_ready:provider.ready,
+      provider_reason:provider.reason||'',
+      view_token
+    }});
+  }catch(e){sendError(res,e)}
+});
+
 app.get('/api/payments/status',async(req,res)=>{
   try{
     const token=verifyCheckoutViewToken(req.query.token);
@@ -1059,8 +1140,15 @@ app.get('/api/payments/status',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
+app.get('/api/payments/doku/notify',(req,res)=>{
+  res.status(200).json({success:true,data:{endpoint:'DOKU payment notification',ready:true,method:'POST'}});
+});
+app.head('/api/payments/doku/notify',(req,res)=>res.sendStatus(200));
+
 app.post('/api/payments/doku/notify',async(req,res)=>{
   try{
+    const hasHeaders=!!(req.headers['client-id']||req.headers['request-id']||req.headers['request-timestamp']||req.headers['signature']);
+    if(!hasHeaders && !String(req.rawBody||'').trim()) return res.status(200).json({success:true,data:{probe:true}});
     const verified=verifyDokuNotification(req);
     const body=req.body||{};
     const invoice=text(body?.order?.invoice_number,100);
@@ -1207,7 +1295,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.1'
+          version:'0.5.2'
         }
       }
     });
