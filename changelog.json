@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.5.4",
+    "date": "2026-09-16",
+    "title": "Performance, Checkout & Auth Stability",
+    "new": [],
+    "improvements": [
+      "Checkout mengunci pilihan nominal, data donatur, dan metode pembayaran selama pembuatan payment berlangsung",
+      "Payment page menggunakan shell cache sehingga kembali dari DOKU tidak dimulai dari skeleton kosong",
+      "Landing, katalog, dan detail program memakai stale data terlebih dahulu lalu revalidasi dengan timeout yang selaras dengan backend",
+      "Setelah PAID, cache publik browser dibersihkan dan dipanaskan ulang otomatis agar angka program dan Live Donation cepat berubah"
+    ],
+    "fixes": [
+      "Menghilangkan error mentah Unexpected token '<' ketika gateway mengembalikan HTML sementara",
+      "Login melakukan warm-up auth cache dan retry aman untuk gangguan gateway sementara",
+      "Memperbaiki false-timeout frontend yang sebelumnya berhenti lebih cepat daripada Apps Script/Render",
+      "Status payment tidak lagi mengganti card yang sudah tampil menjadi error hanya karena refresh provider terlambat"
+    ]
+  },
+  {
     "version": "0.5.3",
     "date": "2026-09-16",
     "title": "Payment Reliability & Auto Reconciliation",

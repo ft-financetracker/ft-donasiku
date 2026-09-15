@@ -1,4 +1,7 @@
 window.KiaAuth = {
+  _warmupPromise:null,
+  _lastWarmupAt:0,
+
   migrateLegacySession(){
     const oldToken = sessionStorage.getItem('kia_session_token');
     const oldUser = sessionStorage.getItem('kia_user');
@@ -73,10 +76,15 @@ window.KiaAuth = {
       throw new Error('Backend URL belum dikonfigurasi');
     }
 
-    const {timeout=15000, ...fetchOptions} = options;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-
+    const {
+      timeout=20000,
+      attempts,
+      retrySafe=false,
+      retryDelay=500,
+      ...fetchOptions
+    }=options;
+    const method=String(fetchOptions.method||'GET').toUpperCase();
+    const maxAttempts=Math.max(1,Number(attempts)||((method==='GET'||retrySafe)?2:1));
     const headers={
       'Content-Type':'application/json',
       'X-KIA-Device-ID':this.getDeviceId(),
@@ -84,42 +92,68 @@ window.KiaAuth = {
     };
 
     const token=this.getToken();
-    if(token && !headers.Authorization) {
-      headers.Authorization='Bearer '+token;
-    }
+    if(token && !headers.Authorization) headers.Authorization='Bearer '+token;
 
-    try{
-      const res=await fetch(base+path,{
-        cache:'no-store',
-        ...fetchOptions,
-        headers,
-        signal:controller.signal
-      });
+    let lastError=null;
+    for(let attempt=1;attempt<=maxAttempts;attempt++){
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),timeout);
+      try{
+        const res=await fetch(base+path,{
+          cache:'no-store',
+          ...fetchOptions,
+          headers,
+          signal:controller.signal
+        });
 
-      const body=await res.json().catch(()=>({
-        success:false,
-        message:'Respons backend tidak valid'
-      }));
+        const raw=await res.text();
+        let body=null;
+        try{
+          body=raw?JSON.parse(raw):null;
+        }catch(_){
+          const html=/^\s*</.test(raw||'');
+          const err=new Error(html
+            ? 'Server sedang memulai layanan. KIA akan mencoba lagi.'
+            : 'Respons server sementara tidak valid. KIA akan mencoba lagi.');
+          err.code='INVALID_SERVER_RESPONSE';
+          err.status=res.status||502;
+          err.retryable=true;
+          throw err;
+        }
 
-      if(!res.ok || !body.success){
-        const err = new Error(body.message||body.code||'REQUEST_FAILED');
-        err.status = res.status;
-        throw err;
+        if(!res.ok || !body?.success){
+          const err=new Error(body?.message||body?.code||'REQUEST_FAILED');
+          err.status=res.status;
+          err.code=body?.code||'REQUEST_FAILED';
+          err.retryable=[502,503,504].includes(res.status)||[
+            'GATEWAY_TIMEOUT','GATEWAY_NETWORK','GATEWAY_HTML_RESPONSE','GATEWAY_INVALID_RESPONSE',
+            'GATEWAY_HTTP_500','GATEWAY_HTTP_502','GATEWAY_HTTP_503','GATEWAY_HTTP_504'
+          ].includes(err.code);
+          throw err;
+        }
+
+        return body;
+      }catch(rawErr){
+        let err=rawErr;
+        if(rawErr?.name==='AbortError'){
+          err=new Error('Server masih menyiapkan data. KIA akan mencoba kembali secara aman.');
+          err.code='REQUEST_TIMEOUT';
+          err.status=504;
+          err.retryable=true;
+        }else if(rawErr instanceof TypeError){
+          err=new Error('Koneksi ke server sedang tidak stabil. KIA akan mencoba lagi.');
+          err.code='NETWORK_ERROR';
+          err.status=503;
+          err.retryable=true;
+        }
+        lastError=err;
+        if(attempt>=maxAttempts||!err.retryable) throw err;
+        await new Promise(resolve=>setTimeout(resolve,retryDelay*attempt));
+      }finally{
+        clearTimeout(timer);
       }
-
-      return body;
-    }catch(err){
-      if(err?.name === 'AbortError'){
-        const timeoutError = new Error(
-          'Server membutuhkan waktu lebih lama. Silakan coba lagi.'
-        );
-        timeoutError.code = 'REQUEST_TIMEOUT';
-        throw timeoutError;
-      }
-      throw err;
-    }finally{
-      clearTimeout(timer);
     }
+    throw lastError||new Error('REQUEST_FAILED');
   },
 
   register(payload){
@@ -130,30 +164,56 @@ window.KiaAuth = {
     });
   },
 
-  login(payload){
+  async login(payload){
+    try{
+      await Promise.race([
+        this.warmup(),
+        new Promise(resolve=>setTimeout(resolve,2500))
+      ]);
+    }catch(_){ }
     return this.request('/api/auth/login',{
       method:'POST',
       body:JSON.stringify(payload),
-      timeout:60000
+      timeout:35000,
+      attempts:2,
+      retrySafe:true,
+      retryDelay:700
     });
   },
 
   me(){
     return this.request('/api/auth/me',{
-      timeout:8000
+      timeout:15000,
+      attempts:2
     });
   },
 
   async warmup(){
     const base=(window.KIA_CONFIG.BACKEND_URL||'').replace(/\/$/,'');
-    if(!base) return;
-    try{
-      await fetch(base+'/health',{
-        method:'GET',
-        cache:'no-store',
-        headers:{'X-KIA-Device-ID':this.getDeviceId()}
-      });
-    }catch(_){}
+    if(!base) return null;
+    if(Date.now()-Number(this._lastWarmupAt||0)<60000) return {success:true,warm:true};
+    if(this._warmupPromise) return this._warmupPromise;
+
+    this._warmupPromise=(async()=>{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),15000);
+      try{
+        const res=await fetch(base+'/health?warm=1',{
+          method:'GET',
+          cache:'no-store',
+          headers:{'X-KIA-Device-ID':this.getDeviceId()},
+          signal:controller.signal
+        });
+        if(res.ok) this._lastWarmupAt=Date.now();
+        return {success:res.ok};
+      }catch(_){
+        return null;
+      }finally{
+        clearTimeout(timer);
+        setTimeout(()=>{this._warmupPromise=null},500);
+      }
+    })();
+    return this._warmupPromise;
   },
 
   async logout(){

@@ -1,8 +1,8 @@
 {
-  "version": "0.5.3",
-  "build": 53,
+  "version": "0.5.4",
+  "build": 54,
   "released_at": "2026-09-16",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Payment reliability: DOKU Check Status recovery, automatic reconciliation, exact payment-attempt switching"
+  "summary": "Performance, checkout stability, payment return cache refresh, and resilient authentication gateway handling"
 }

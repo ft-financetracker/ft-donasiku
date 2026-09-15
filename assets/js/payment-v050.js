@@ -5,7 +5,13 @@
   const label=s=>({CREATED:'Menunggu aktivasi channel',PENDING:'Menunggu pembayaran',PAID:'Pembayaran berhasil',FAILED:'Pembayaran gagal',EXPIRED:'Pembayaran kedaluwarsa',CANCELLED:'Pembayaran dibatalkan'}[String(s||'').toUpperCase()]||s||'—');
   const method=s=>({QRIS:'QRIS',VIRTUAL_ACCOUNT:'Virtual Account'}[String(s||'').toUpperCase()]||s||'—');
 
-  let token='',timer=null,current=null,lastProviderCheck=0;
+  let token='',timer=null,current=null,lastProviderCheck=0,paidWarmStarted=false;
+  const paymentShellKey=t=>'kia_payment_shell_v054_'+String(t||'').slice(-48);
+  function cacheShell(data){try{sessionStorage.setItem(paymentShellKey(token),JSON.stringify({saved_at:Date.now(),data}))}catch(_){}}
+  function readShell(){try{const x=JSON.parse(sessionStorage.getItem(paymentShellKey(token))||'null');return x&&Date.now()-Number(x.saved_at||0)<2*3600000?x.data:null}catch{return null}}
+  function markPublicDirty(){const stamp=Date.now();try{localStorage.setItem('kia_public_invalidate_at',String(stamp));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i)||'';if(/^kia_(?:public_bootstrap|catalog|program_detail)_v0?5[124]_/.test(k)||/^kia_(?:public_bootstrap|catalog|program_detail)_v054/.test(k))localStorage.removeItem(k)}}catch(_){ }return stamp}
+  async function safeJson(response){const raw=await response.text();try{return raw?JSON.parse(raw):null}catch{throw new Error(/^\s*</.test(raw||'')?'Server sedang memulai layanan. Status lokal tetap aman.':'Respons server status sementara tidak valid.')}}
+  async function warmPublicAfterPaid(data){if(paidWarmStarted)return;paidWarmStarted=true;markPublicDirty();const programId=data?.donation?.program_id||data?.program?.program_id||'';try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/bootstrap?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_public_bootstrap_v054',JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }if(programId){try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(programId)}?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_program_detail_v054_'+programId,JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }}}
 
   function terminal(status){return ['PAID','FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(String(status||'').toUpperCase())}
 
@@ -50,11 +56,12 @@
   }
 
   function render(data){
-    current=data;
+    current=data;cacheShell(data);
     const root=$('[data-payment-root]'),d=data.donation||{},p=data.payment||{},program=data.program||{};
     const status=String(p.status||'').toUpperCase(),paid=status==='PAID',failed=['FAILED','EXPIRED','CANCELLED'].includes(status);
     root.classList.toggle('payment-success',paid);
     root.classList.toggle('payment-failed',failed);
+    if(paid)warmPublicAfterPaid(data);
 
     const icon=paid?'check_circle':failed?'error':'hourglass_top';
     const payAction=data.provider_ready&&p.payment_url&&!terminal(status)
@@ -69,6 +76,12 @@
 
     const changeAction=!paid
       ? '<button class="btn btn-ghost" type="button" data-change-method><span class="material-symbols-outlined">swap_horiz</span> Ganti Metode</button>'
+      : '';
+    const successActions=paid
+      ? `<a class="btn btn-primary" href="./program.html?id=${encodeURIComponent(d.program_id||'')}">Lihat Program</a><a class="btn btn-ghost" href="./">Kembali ke Beranda</a>`
+      : '';
+    const syncAction=!paid
+      ? `<button class="btn ${payAction?'btn-ghost':'btn-primary'}" type="button" data-refresh-status><span class="material-symbols-outlined">sync</span> Sinkronkan Status</button>`
       : '';
 
     const attempt=Number(p.attempt_no)||1;
@@ -91,12 +104,10 @@
       ${p.va_number?`<div class="payment-shell-note"><strong>Virtual Account</strong><br>${esc(p.va_number)}</div>`:''}
 
       <div class="payment-actions">
-        ${payAction}
-        <button class="btn ${payAction?'btn-ghost':'btn-primary'}" type="button" data-refresh-status>
-          <span class="material-symbols-outlined">sync</span> Sinkronkan Status
-        </button>
+        ${successActions||payAction}
+        ${syncAction}
         ${changeAction}
-        <a class="btn btn-ghost" href="./program.html?id=${encodeURIComponent(d.program_id||'')}">Kembali ke Program</a>
+        ${paid?'':`<a class="btn btn-ghost" href="./program.html?id=${encodeURIComponent(d.program_id||'')}">Kembali ke Program</a>`}
       </div>
 
       <div class="payment-shell-note" data-method-picker hidden>
@@ -122,7 +133,7 @@
     box.querySelectorAll('button').forEach(b=>b.disabled=true);
     status.textContent='Menyiapkan Payment Attempt baru…';
 
-    const controller=new AbortController(),t=setTimeout(()=>controller.abort(),22000);
+    const controller=new AbortController(),t=setTimeout(()=>controller.abort(),65000);
     try{
       const response=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/payments/retry`,{
         method:'POST',
@@ -130,11 +141,11 @@
         body:JSON.stringify({token,payment_method:paymentMethod}),
         signal:controller.signal
       });
-      const r=await response.json();
+      const r=await safeJson(response);
       if(!response.ok||!r.success)throw new Error(r.message||'Metode pembayaran belum dapat diganti.');
 
       token=r.data.view_token;
-      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=053&t='+Date.now();
+      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=054&t='+Date.now();
       history.replaceState(null,'',nextUrl);
 
       // Render attempt baru langsung; tidak menunggu reload/cache browser.
@@ -156,47 +167,60 @@
 
   async function load(refreshProvider=false){
     const root=$('[data-payment-root]'),btn=$('[data-refresh-status]');
+    const hadView=!!current;
     if(refreshProvider){
       lastProviderCheck=Date.now();
-      if(btn){
-        btn.disabled=true;
-        btn.innerHTML='<span class="material-symbols-outlined">sync</span> Menyinkronkan…';
-      }
+      if(btn){btn.disabled=true;btn.innerHTML='<span class="material-symbols-outlined">sync</span> Menyinkronkan…'}
     }
 
-    const controller=new AbortController(),t=setTimeout(()=>controller.abort(),18000);
+    let slowTimer=null;
+    if(!hadView){
+      slowTimer=setTimeout(()=>{
+        if(!current)root.innerHTML='<div class="empty-state"><strong>Masih menyiapkan status pembayaran…</strong><br><span class="muted mini">Tidak perlu F5. KIA tetap menunggu server dan akan menampilkan data saat tersedia.</span></div>';
+      },9000);
+    }
+
+    const controller=new AbortController(),t=setTimeout(()=>controller.abort(),refreshProvider?75000:38000);
     try{
       const suffix=refreshProvider?'&refresh=1':'';
       const response=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/payments/status?token=${encodeURIComponent(token)}${suffix}`,{
-        cache:'no-store',
-        signal:controller.signal
+        cache:'no-store',signal:controller.signal
       });
-      const r=await response.json();
-      if(!response.ok||!r.success)throw new Error(r.message||'Status pembayaran gagal dimuat.');
+      const r=await safeJson(response);
+      if(!response.ok||!r?.success)throw new Error(r?.message||'Status pembayaran gagal dimuat.');
       render(r.data);
+      return true;
     }catch(e){
-      if(refreshProvider||!root.dataset.loaded){
+      // Jika shell/status sebelumnya sudah ada, jangan rusak card menjadi error/skeleton.
+      if(!current){
         root.innerHTML=`<div class="empty-state">${esc(e.message||'Status pembayaran belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-retry-payment>Coba Lagi</button></div>`;
         $('[data-retry-payment]')?.addEventListener('click',()=>load(true));
+      }else if(btn){
+        btn.disabled=false;
+        btn.innerHTML='<span class="material-symbols-outlined">sync</span> Sinkronkan Status';
       }
-      schedule('PENDING');
+      schedule(current?.payment?.status||'PENDING');
+      return false;
     }finally{
-      clearTimeout(t);
-      root.dataset.loaded='1';
+      clearTimeout(t);if(slowTimer)clearTimeout(slowTimer);root.dataset.loaded='1';
     }
   }
 
-  document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden)load(Date.now()-lastProviderCheck>=65000);
+  document.addEventListener('visibilitychange' ,async()=>{
+    if(document.hidden)return;
+    await load(false);
+    if(current&&!terminal(current.payment?.status))setTimeout(()=>load(true),350);
   });
 
-  document.addEventListener('DOMContentLoaded',()=>{
+  document.addEventListener('DOMContentLoaded',async()=>{
     token=new URLSearchParams(location.search).get('token')||'';
     if(!token){
       $('[data-payment-root]').innerHTML='<div class="empty-state">Tautan pembayaran tidak valid.</div>';
       return;
     }
-    // Initial load sekaligus mencoba recovery transaksi lama yang tertahan PENDING.
-    load(true);
+    const cached=readShell();
+    if(cached)render(cached);
+    await load(false);
+    if(current&&!terminal(current.payment?.status))setTimeout(()=>load(true),700);
   });
 })();

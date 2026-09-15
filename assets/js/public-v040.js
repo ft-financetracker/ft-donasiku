@@ -3,8 +3,9 @@
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]));
-  const CACHE_KEY='kia_public_bootstrap_v052';
-  const LEGACY_CACHE_KEY='kia_public_bootstrap_v051';
+  const CACHE_KEY='kia_public_bootstrap_v054';
+  const LEGACY_CACHE_KEYS=['kia_public_bootstrap_v052','kia_public_bootstrap_v051'];
+  let lastAppliedInvalidation=Number(localStorage.getItem('kia_public_invalidate_at')||0);
   const CACHE_MAX_AGE=6*60*60*1000;
 
   const DEFAULT_HEROES=[
@@ -14,9 +15,9 @@
   ];
   let heroes=[],heroIndex=0,heroTimer=null;
 
-  function readCache(){try{for(const key of [CACHE_KEY,LEGACY_CACHE_KEY]){const x=JSON.parse(localStorage.getItem(key)||'null');if(x&&Date.now()-Number(x.saved_at||0)<CACHE_MAX_AGE)return x.data}return null}catch{return null}}
+  function readCache(){try{for(const key of [CACHE_KEY,...LEGACY_CACHE_KEYS]){const x=JSON.parse(localStorage.getItem(key)||'null');if(x&&Date.now()-Number(x.saved_at||0)<CACHE_MAX_AGE)return x.data}return null}catch{return null}}
   function writeCache(data){try{localStorage.setItem(CACHE_KEY,JSON.stringify({saved_at:Date.now(),data}))}catch{}}
-  async function fetchJson(url,timeout=10000){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{signal:c.signal});const j=await r.json();if(!r.ok||!j.success)throw new Error(j.message||'PUBLIC_FETCH_FAILED');return j.data}finally{clearTimeout(t)}}
+  async function fetchJson(url,timeout=30000,{force=false}={}){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{signal:c.signal,cache:force?'no-store':'default'});const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{throw new Error(/^\s*</.test(raw||'')?'Server publik sedang memulai layanan.':'Respons data publik sementara tidak valid.')}if(!r.ok||!j?.success)throw new Error(j?.message||'PUBLIC_FETCH_FAILED');return j.data}finally{clearTimeout(t)}}
 
   function normalizeHeroAsset(hero,index){
     const item={...(hero||{})};const slot=Number(item.sort_order)||index+1;const image=String(item.image_url||'').trim();
@@ -58,7 +59,7 @@
   }
   function publicError(){const root=$('[data-public-programs]');if(root)root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Program belum dapat dimuat. <button class="btn btn-ghost" type="button" data-public-retry>Coba Lagi</button></div>';if($('[data-live-donations]'))$('[data-live-donations]').innerHTML='<div class="empty-state" style="grid-column:1/-1">Live Donation belum dapat dimuat.</div>';$('[data-public-retry]')?.addEventListener('click',load)}
   async function prefetchCatalog(seed){
-    const key='kia_catalog_v052_1_ALL_';
+    const key='kia_catalog_v054_1_ALL_';
     try{
       if(seed?.programs?.length){
         const total=Number(seed.stats?.active_programs)||seed.programs.length;
@@ -66,22 +67,26 @@
       }
       const existing=JSON.parse(localStorage.getItem(key)||'null');
       if(existing&&!existing.partial&&Date.now()-Number(existing.t||0)<10*60*1000)return;
-      const data=await fetchJson(`${KIA_CONFIG.BACKEND_URL}/api/public/programs?page=1&limit=12&search=&category=ALL`,6500);
+      const data=await fetchJson(`${KIA_CONFIG.BACKEND_URL}/api/public/programs?page=1&limit=12&search=&category=ALL`,28000);
       localStorage.setItem(key,JSON.stringify({t:Date.now(),d:data,partial:false}));
     }catch(_){ }
   }
-  async function load(){
-    const cached=readCache();if(cached){applyData(cached);setTimeout(()=>prefetchCatalog(cached),20);}
+  async function load({force=false}={}){
+    const cached=readCache();
+    if(cached){applyData(cached);setTimeout(()=>prefetchCatalog(cached),20)}
     try{
-      const data=await fetchJson(`${KIA_CONFIG.BACKEND_URL}/api/public/bootstrap`,cached?8000:12000);
-      writeCache(data);applyData(data);
-      setTimeout(()=>prefetchCatalog(data),40);
+      const data=await fetchJson(`${KIA_CONFIG.BACKEND_URL}/api/public/bootstrap${force?'?refresh='+Date.now():''}`,cached?26000:36000,{force});
+      writeCache(data);applyData(data);lastAppliedInvalidation=Number(localStorage.getItem('kia_public_invalidate_at')||0);setTimeout(()=>prefetchCatalog(data),40);
     }catch(e){if(!cached)publicError()}
   }
+  function refreshIfInvalidated(){const stamp=Number(localStorage.getItem('kia_public_invalidate_at')||0);if(stamp>lastAppliedInvalidation){lastAppliedInvalidation=stamp;load({force:true})}}
   document.addEventListener('DOMContentLoaded',()=>{
     heroes=DEFAULT_HEROES;renderHero();restartHeroTimer();
     $('[data-hero-prev]').onclick=()=>{heroIndex=(heroIndex-1+heroes.length)%heroes.length;renderHero();restartHeroTimer()};
     $('[data-hero-next]').onclick=()=>{heroIndex=(heroIndex+1)%heroes.length;renderHero();restartHeroTimer()};
     load();
   });
+  window.addEventListener('pageshow',refreshIfInvalidated);
+  window.addEventListener('storage',e=>{if(e.key==='kia_public_invalidate_at')refreshIfInvalidated()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfInvalidated()});
 })();

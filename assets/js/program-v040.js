@@ -146,16 +146,17 @@
     }catch(_){ }
   }
 
-  function detailCacheKey(id){return 'kia_program_detail_v051_'+id}
-  function readDetailCache(id){try{const x=JSON.parse(localStorage.getItem(detailCacheKey(id))||'null');return x&&Date.now()-x.saved_at<6*3600000?x.data:null}catch{return null}}
+  function detailCacheKey(id){return 'kia_program_detail_v054_'+id}
+  function legacyDetailCacheKeys(id){return ['kia_program_detail_v051_'+id]}
+  function readDetailCache(id){try{for(const k of [detailCacheKey(id),...legacyDetailCacheKeys(id)]){const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&Date.now()-x.saved_at<6*3600000)return x.data}return null}catch{return null}}
   function writeDetailCache(id,data){try{localStorage.setItem(detailCacheKey(id),JSON.stringify({saved_at:Date.now(),data}))}catch{}}
   function summaryFallback(id){
     try{
-      const bootstrap=JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null')?.data;
+      const bootstrap=(JSON.parse(localStorage.getItem('kia_public_bootstrap_v054')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v052')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null'))?.data;
       const fromBootstrap=(bootstrap?.programs||[]).find(x=>String(x.program_id)===String(id));
       if(fromBootstrap)return {program:fromBootstrap,transparency:{paid_donations:fromBootstrap.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
       for(let i=0;i<localStorage.length;i++){
-        const key=localStorage.key(i)||'';if(!key.startsWith('kia_catalog_v051_'))continue;
+        const key=localStorage.key(i)||'';if(!/^kia_catalog_v0(?:54|52|51)_/.test(key))continue;
         const data=JSON.parse(localStorage.getItem(key)||'null')?.d;
         const found=(data?.items||[]).find(x=>String(x.program_id)===String(id));
         if(found)return {program:found,transparency:{paid_donations:found.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
@@ -163,20 +164,26 @@
     }catch(_){ }
     return null;
   }
-  async function load(){
+  async function load({force=false}={}){
     const id=new URLSearchParams(location.search).get('id');
     if(!id){$('[data-program-root]').innerHTML='<div class="empty-state">Program tidak ditemukan.</div>';return}
     const cached=readDetailCache(id);
     const fast=cached||summaryFallback(id);
     if(fast){detail=fast;program=detail.program;render()}
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),fast?8000:12000);
+    const root=$('[data-program-root]');
+    const slow=!fast?setTimeout(()=>{root.innerHTML='<div class="empty-state"><strong>Masih menyiapkan detail program…</strong><br><span class="muted mini">Tidak perlu F5. KIA akan menampilkan program ketika server selesai merespons.</span></div>'},9000):null;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),fast?28000:38000);
     try{
-      const response=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}`,{signal:controller.signal});
-      const r=await response.json();
-      if(!response.ok||!r.success)throw new Error(r.message||'Program belum dapat dimuat.');
+      const url=`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}${force?'?refresh='+Date.now():''}`;
+      const response=await fetch(url,{signal:controller.signal,cache:force?'no-store':'default'});
+      const raw=await response.text();let r;try{r=JSON.parse(raw)}catch{throw new Error(/^\s*</.test(raw||'')?'Server program sedang memulai layanan.':'Respons detail program sementara tidak valid.')}
+      if(!response.ok||!r?.success)throw new Error(r?.message||'Program belum dapat dimuat.');
       detail=r.data||{};program=detail.program;writeDetailCache(id,detail);render();
-    }catch(e){if(!fast)$('[data-program-root]').innerHTML=`<div class="empty-state">${esc(e.message||'Program belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-program-retry>Coba Lagi</button></div>`;$('[data-program-retry]')?.addEventListener('click',load)}finally{clearTimeout(timer)}
+    }catch(e){
+      if(!fast){root.innerHTML=`<div class="empty-state">${esc(e.message||'Program belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-program-retry>Coba Lagi</button></div>`;$('[data-program-retry]')?.addEventListener('click',()=>load({force:true}))}
+    }finally{clearTimeout(timer);if(slow)clearTimeout(slow)}
   }
+  function refreshIfInvalidated(){const stamp=Number(localStorage.getItem('kia_public_invalidate_at')||0);const seen=Number(sessionStorage.getItem('kia_program_seen_invalidation')||0);if(stamp>seen){sessionStorage.setItem('kia_program_seen_invalidation',String(stamp));load({force:true})}}
 
   document.addEventListener('DOMContentLoaded',()=>{
     $('[data-lightbox-close]').onclick=()=>{$('[data-lightbox]').hidden=true};
@@ -187,4 +194,6 @@
     $('[data-lightbox]')?.addEventListener('touchend',e=>{const end=e.changedTouches?.[0]?.clientX||0;if(Math.abs(end-touchStart)>45)selectImage(active+(end<touchStart?1:-1))},{passive:true});
     load();
   });
+  window.addEventListener('pageshow',refreshIfInvalidated);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfInvalidated()});
 })();

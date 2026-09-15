@@ -2,21 +2,21 @@
   const $=s=>document.querySelector(s);
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':'&quot;'}[c]));
   const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
-  const VERSION='v052';
+  const VERSION='v054';
   let page=1,totalPages=1,timer,requestSeq=0;
 
   const key=(p,q,c)=>`kia_catalog_${VERSION}_${p}_${c}_${q.toLowerCase().slice(0,80)}`;
-  const legacyKey=(p,q,c)=>`kia_catalog_v051_${p}_${c}_${q.toLowerCase().slice(0,80)}`;
+  const legacyKeys=(p,q,c)=>[`kia_catalog_v052_${p}_${c}_${q.toLowerCase().slice(0,80)}`,`kia_catalog_v051_${p}_${c}_${q.toLowerCase().slice(0,80)}`];
 
   function parseCache(k,maxAge=6*3600000){
     try{const x=JSON.parse(localStorage.getItem(k)||'null');return x&&Date.now()-Number(x.t||0)<maxAge?x.d:null}catch{return null}
   }
-  function read(p,q,c){return parseCache(key(p,q,c))||parseCache(legacyKey(p,q,c))}
+  function read(p,q,c){return parseCache(key(p,q,c))||legacyKeys(p,q,c).map(k=>parseCache(k)).find(Boolean)||null}
   function write(k,d){try{localStorage.setItem(k,JSON.stringify({t:Date.now(),d}))}catch{}}
 
   function bootstrapSeed(){
     try{
-      for(const k of ['kia_public_bootstrap_v052','kia_public_bootstrap_v051']){
+      for(const k of ['kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051']){
         const x=JSON.parse(localStorage.getItem(k)||'null');
         if(!x||Date.now()-Number(x.saved_at||0)>6*3600000||!x.data?.programs?.length)continue;
         const total=Number(x.data.stats?.active_programs)||x.data.programs.length;
@@ -45,19 +45,14 @@
     $('[data-catalog-next]').disabled=page>=totalPages;
   }
 
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  async function request(url,{attempts=2,timeout=9000}={}){
-    let last;
-    for(let attempt=1;attempt<=attempts;attempt++){
-      const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout+(attempt-1)*3500);
-      try{
-        const r=await fetch(url,{signal:c.signal,cache:'no-store'});
-        const j=await r.json();
-        if(!r.ok||!j.success)throw new Error(j.message||'CATALOG_FAILED');
-        return j.data;
-      }catch(e){last=e;if(attempt<attempts)await sleep(450*attempt)}finally{clearTimeout(t)}
-    }
-    throw last||new Error('CATALOG_FAILED');
+  async function request(url,{timeout=30000,force=false}={}){
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
+    try{
+      const r=await fetch(url,{signal:c.signal,cache:force?'no-store':'default'});
+      const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{throw new Error(/^\s*</.test(raw||'')?'Server program sedang memulai layanan.':'Respons katalog sementara tidak valid.')}
+      if(!r.ok||!j?.success)throw new Error(j?.message||'CATALOG_FAILED');
+      return j.data;
+    }finally{clearTimeout(t)}
   }
 
   async function load(next=1){
@@ -67,13 +62,15 @@
     if(!cached&&page===1&&!q&&cat==='ALL')cached=bootstrapSeed();
     if(cached)render(cached,{refreshing:true});
     else root.innerHTML='<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+    const slow=setTimeout(()=>{if(seq===requestSeq&&!cached)$('[data-catalog-page]').textContent='Server sedang menyiapkan program… tidak perlu F5'},9000);
 
     const url=`${KIA_CONFIG.BACKEND_URL}/api/public/programs?page=${page}&limit=12&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`;
     try{
-      const data=await request(url,{attempts:2,timeout:cached?7000:9500});
+      const data=await request(url,{timeout:cached?26000:36000});
       if(seq!==requestSeq)return;
-      write(k,data);render(data);
+      clearTimeout(slow);write(k,data);render(data);
     }catch(e){
+      clearTimeout(slow);
       if(seq!==requestSeq)return;
       if(cached){render(cached);$('[data-catalog-page]').textContent=`${page} / ${totalPages} · data tersimpan`;return;}
       root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Program belum dapat dimuat. <button class="btn btn-ghost" type="button" data-catalog-retry>Coba Lagi</button></div>';
@@ -81,6 +78,7 @@
     }
   }
 
+  function refreshIfInvalidated(){const stamp=Number(localStorage.getItem('kia_public_invalidate_at')||0);const seen=Number(sessionStorage.getItem('kia_catalog_seen_invalidation')||0);if(stamp>seen){sessionStorage.setItem('kia_catalog_seen_invalidation',String(stamp));load(page)}}
   document.addEventListener('DOMContentLoaded',()=>{
     $('[data-catalog-prev]').onclick=()=>page>1&&load(page-1);
     $('[data-catalog-next]').onclick=()=>page<totalPages&&load(page+1);
@@ -88,4 +86,6 @@
     $('[data-catalog-search]').oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>load(1),350)};
     load(1);
   });
+  window.addEventListener('pageshow',refreshIfInvalidated);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfInvalidated()});
 })();
