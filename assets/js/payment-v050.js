@@ -6,12 +6,12 @@
   const method=s=>({QRIS:'QRIS',VIRTUAL_ACCOUNT:'Virtual Account'}[String(s||'').toUpperCase()]||s||'—');
 
   let token='',timer=null,current=null,lastProviderCheck=0,paidWarmStarted=false;
-  const paymentShellKey=t=>'kia_payment_shell_v055_'+String(t||'').slice(-48);
+  const paymentShellKey=t=>'kia_payment_shell_v056_'+String(t||'').slice(-48);
   function cacheShell(data){try{sessionStorage.setItem(paymentShellKey(token),JSON.stringify({saved_at:Date.now(),data}))}catch(_){}}
-  function readShell(){try{const x=JSON.parse(sessionStorage.getItem(paymentShellKey(token))||'null');return x&&Date.now()-Number(x.saved_at||0)<2*3600000?x.data:null}catch{return null}}
-  function markPublicDirty(){const stamp=Date.now();try{localStorage.setItem('kia_public_invalidate_at',String(stamp));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i)||'';if(/^kia_(?:public_bootstrap|catalog|program_detail)_v0?5(?:1|2|4|5)_/.test(k)||/^kia_(?:public_bootstrap|catalog|program_detail)_v05(?:1|2|4|5)/.test(k))localStorage.removeItem(k)}}catch(_){ }return stamp}
+  function readShell(){try{for(const k of [paymentShellKey(token),'kia_payment_shell_v055_'+String(token||'').slice(-48)]){const x=JSON.parse(sessionStorage.getItem(k)||'null');if(x&&Date.now()-Number(x.saved_at||0)<2*3600000)return x.data}return null}catch{return null}}
+  function markPublicDirty(){const stamp=Date.now();try{localStorage.setItem('kia_public_invalidate_at',String(stamp));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i)||'';if(/^kia_(?:public_bootstrap|catalog|program_detail)_v0?5(?:1|2|4|5|6)_/.test(k)||/^kia_(?:public_bootstrap|catalog|program_detail)_v05(?:1|2|4|5|6)/.test(k))localStorage.removeItem(k)}}catch(_){ }return stamp}
   async function safeJson(response){const raw=await response.text();try{return raw?JSON.parse(raw):null}catch{throw new Error(/^\s*</.test(raw||'')?'Server sedang memulai layanan. Status lokal tetap aman.':'Respons server status sementara tidak valid.')}}
-  async function warmPublicAfterPaid(data){if(paidWarmStarted)return;paidWarmStarted=true;markPublicDirty();const programId=data?.donation?.program_id||data?.program?.program_id||'';try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/bootstrap?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_public_bootstrap_v055',JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }if(programId){try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(programId)}?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_program_detail_v055_'+programId,JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }}}
+  async function warmPublicAfterPaid(data){if(paidWarmStarted)return;paidWarmStarted=true;markPublicDirty();const programId=data?.donation?.program_id||data?.program?.program_id||'';try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/bootstrap?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_public_bootstrap_v056',JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }if(programId){try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(programId)}?paid_refresh=${Date.now()}`,{cache:'no-store'});const j=await safeJson(r);if(r.ok&&j?.success)localStorage.setItem('kia_program_detail_v056_'+programId,JSON.stringify({saved_at:Date.now(),data:j.data}))}catch(_){ }}}
 
   function terminal(status){return ['PAID','FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(String(status||'').toUpperCase())}
 
@@ -145,7 +145,7 @@
       if(!response.ok||!r.success)throw new Error(r.message||'Metode pembayaran belum dapat diganti.');
 
       token=r.data.view_token;
-      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=054&t='+Date.now();
+      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=056&t='+Date.now();
       history.replaceState(null,'',nextUrl);
 
       // Render attempt baru langsung; tidak menunggu reload/cache browser.

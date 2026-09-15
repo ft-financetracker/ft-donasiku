@@ -1,8 +1,8 @@
 {
-  "version": "0.5.5",
-  "build": 55,
+  "version": "0.5.6",
+  "build": 56,
   "released_at": "2026-09-16",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Live Donation hierarchy, paginated program donor feed, donor verification labels, and public-feed performance polish"
+  "summary": "Compact Live Donation cards, responsive donor feed, donor social timeline, love/doa interactions, profile frames, and activity badges"
 }

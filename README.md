@@ -1,14 +1,5 @@
-# KIA v0.5.5 — Live Donation & Donor Feed
+# KIA v0.5.6 — Donor Social & Layout Polish
 
-Patch bertahap setelah v0.5.4. Fokus versi ini adalah penyajian donasi publik yang scalable tanpa mengubah payment engine yang sudah stabil.
+Patch bertahap di atas baseline v0.5.5. Fokus: merapikan hierarchy Live Donation, membuat donor feed scalable/responsive, serta mengaktifkan interaksi Love + doa/pesan dan profil donor aman.
 
-## Scope
-- Live Donation hierarchy baru: nominal → program → donatur/badge → pesan.
-- Ringkasan program hanya 5 donasi terbaru.
-- Halaman Semua Donasi per program, pagination 10/page.
-- Badge publik dasar: Umum / Terverifikasi / Anonim.
-- Avatar/frame placeholder untuk fondasi donor profile v0.5.6.
-- Tidak ada sheet baru dan tidak ada migration.
-
-## Tidak masuk v0.5.5
-Love, doa/komentar antar-user, timeline sosial, achievement badge publik, dan donor profile penuh tetap untuk v0.5.6 agar payment/public-read stability tidak tercampur dengan write-social flow.
+Boundary tetap: Donation != Payment, status PAID hanya dari verifikasi server/DOKU, anonymous = Hamba Allah, dan tidak ada leaderboard nominal.
