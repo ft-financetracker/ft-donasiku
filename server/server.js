@@ -320,10 +320,11 @@ async function applyDokuStatus(payment,inquiry,{source='STATUS_API'}={}){
 }
 
 async function paymentSnapshot(donationId,paymentId){
-  const [view,payment]=await Promise.all([
-    gas('publicPaymentStatusFast',{donation_id:donationId,payment_id:paymentId},{timeout:12000,attempts:1}),
-    gas('findOne',{sheet:'09_PAYMENTS',filters:{payment_id:paymentId,donation_id:donationId}},{timeout:10000,attempts:1})
-  ]);
+  const view=await gas('publicPaymentStatusFast',{
+    donation_id:donationId,
+    payment_id:paymentId
+  },{timeout:16000,attempts:2});
+  const payment=view?.payment||null;
   if(!payment) throw httpError(404,'Payment tidak ditemukan.','PAYMENT_NOT_FOUND');
   return {view,payment};
 }
@@ -408,9 +409,9 @@ async function publicCached(key,loader,{freshMs=45000,staleMs=5*60*1000}={}){
 }
 async function warmPublicCache(){
   try{
-    const bootstrap=await gas('publicBootstrapFast',{}, {timeout:16000,attempts:1});
+    const bootstrap=await gas('publicBootstrapFast',{}, {timeout:18000,attempts:2});
     publicResponseCache.set('bootstrap',{data:bootstrap,savedAt:Date.now(),refreshing:null});
-    const programs=await gas('publicProgramsFast',{page:1,limit:12,search:'',category:'ALL'},{timeout:16000,attempts:1});
+    const programs=await gas('publicProgramsFast',{page:1,limit:12,search:'',category:'ALL'},{timeout:18000,attempts:2});
     publicResponseCache.set('programs:1:12::ALL',{data:programs,savedAt:Date.now(),refreshing:null});
   }catch(err){console.warn('PUBLIC_CACHE_WARM_FAILED',err.message)}
 }
@@ -436,33 +437,89 @@ const PUBLIC_INVALIDATING_ACTIONS=new Set([
   'faqSaveFast','faqArchiveFast','siteSettingsSaveFast','commitDokuPaymentFast'
 ]);
 
+const GATEWAY_RETRYABLE_CODES=new Set([
+  'GATEWAY_TIMEOUT','GATEWAY_NETWORK','GATEWAY_HTML_RESPONSE','GATEWAY_INVALID_RESPONSE',
+  'GATEWAY_HTTP_500','GATEWAY_HTTP_502','GATEWAY_HTTP_503','GATEWAY_HTTP_504','WRITE_BUSY'
+]);
+
+function gatewayError(code,status=502,detail=''){
+  const e=new Error(code);
+  e.code=code;
+  e.status=status;
+  e.detail=detail;
+  return e;
+}
+
+function normalizeGatewayError(err){
+  if(err?.name==='AbortError') return gatewayError('GATEWAY_TIMEOUT',504);
+  if(err?.code) return err;
+  if(err instanceof SyntaxError) return gatewayError('GATEWAY_INVALID_RESPONSE',502,err.message);
+  if(err instanceof TypeError) return gatewayError('GATEWAY_NETWORK',503,err.message);
+  const e=gatewayError(String(err?.message||'GATEWAY_ERROR'),Number(err?.status)||500);
+  return e;
+}
+
+function isGatewayRetryable(err){
+  const code=String(err?.code||'');
+  return GATEWAY_RETRYABLE_CODES.has(code)||/^GATEWAY_HTTP_5\d\d$/.test(code);
+}
+
 async function gas(action,payload={},opts={}){
-  if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
+  if(!GAS_URL||!GATEWAY_SECRET) throw gatewayError('BACKEND_NOT_CONFIGURED',503);
   const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
     : (isRead ? 2 : 1); // WRITE default tetap tidak di-retry.
-  const timeout=Number(opts.timeout)|| (isRead?12000:18000);
+  const timeout=Number(opts.timeout)|| (isRead?14000:18000);
   const body=JSON.stringify({action,gateway_secret:GATEWAY_SECRET,...payload});
   let lastError=null;
+
   for(let attempt=1;attempt<=attempts;attempt++){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeout);
     try{
-      const r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,signal:controller.signal});
-      const out=await r.json();
-      if(!out.success){const e=new Error(out.code||'GATEWAY_ERROR');e.code=out.code;throw e;}
+      const r=await fetch(GAS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body,
+        signal:controller.signal
+      });
+
+      const raw=await r.text();
+      let out=null;
+      try{
+        out=raw?JSON.parse(raw):null;
+      }catch(parseErr){
+        const html=/^\s*(?:<!doctype\s+html|<html|<head|<body)/i.test(raw||'');
+        throw gatewayError(html?'GATEWAY_HTML_RESPONSE':'GATEWAY_INVALID_RESPONSE',502,String(parseErr?.message||''));
+      }
+
+      if(!r.ok){
+        throw gatewayError(`GATEWAY_HTTP_${r.status}`,r.status>=500?503:502);
+      }
+      if(!out||typeof out!=='object'){
+        throw gatewayError('GATEWAY_INVALID_RESPONSE',502);
+      }
+      if(!out.success){
+        const e=new Error(out.code||'GATEWAY_ERROR');
+        e.code=out.code||'GATEWAY_ERROR';
+        e.status=out.code==='WRITE_BUSY'?503:500;
+        throw e;
+      }
+
       if(PUBLIC_INVALIDATING_ACTIONS.has(action)) clearPublicResponseCache();
       return out.data;
-    }catch(err){
-      lastError=err;
-      if(attempt<attempts) await new Promise(resolve=>setTimeout(resolve,180));
-    }finally{clearTimeout(timer)}
+    }catch(rawErr){
+      lastError=normalizeGatewayError(rawErr);
+      if(attempt>=attempts||!isGatewayRetryable(lastError)) break;
+      await new Promise(resolve=>setTimeout(resolve,250*attempt));
+    }finally{
+      clearTimeout(timer);
+    }
   }
-  const e=new Error(lastError?.name==='AbortError'?'GATEWAY_TIMEOUT':(lastError?.message||'GATEWAY_ERROR'));
-  e.code=e.message;
-  throw e;
+
+  throw lastError||gatewayError('GATEWAY_ERROR',500);
 }
 
 const sessionCache=new Map();
@@ -487,16 +544,30 @@ function cacheAuthUserRow(user){
   authUserCache.set(email,{user:{...user},expires:Date.now()+AUTH_USER_CACHE_TTL});
 }
 
+let authWarmPromise=null;
+let authCacheReadyAt=0;
+
 async function lookupAuthUser(email){
   const key=normEmail(email);
-  const cached=authUserCache.get(key);
+  let cached=authUserCache.get(key);
   if(cached&&cached.expires>Date.now()) return cached.user;
   if(cached) authUserCache.delete(key);
+
+  // Jika cold-start sedang melakukan warm cache, beri kesempatan singkat agar
+  // login tidak langsung membuat request Spreadsheet kedua yang bersaing.
+  if(authWarmPromise){
+    await Promise.race([
+      authWarmPromise.catch(()=>false),
+      new Promise(resolve=>setTimeout(resolve,1800))
+    ]);
+    cached=authUserCache.get(key);
+    if(cached&&cached.expires>Date.now()) return cached.user;
+  }
 
   const user=await gas('findOne',{
     sheet:'01_USERS',
     filters:{email:key,status:'ACTIVE'}
-  },{timeout:15000,attempts:1});
+  },{timeout:14000,attempts:2});
 
   if(user) cacheAuthUserRow(user);
   return user;
@@ -508,11 +579,24 @@ async function warmAuthUserCache(){
       sheet:'01_USERS',
       filters:{status:'ACTIVE'},
       limit:5000
-    },{timeout:20000,attempts:1});
+    },{timeout:18000,attempts:2});
     (rows||[]).forEach(cacheAuthUserRow);
+    authCacheReadyAt=Date.now();
+    return true;
   }catch(err){
-    console.warn('AUTH_CACHE_WARM_FAILED',err.message);
+    console.warn('AUTH_CACHE_WARM_FAILED',err.code||err.message);
+    return false;
   }
+}
+
+function ensureAuthWarm(){
+  if(authCacheReadyAt&&Date.now()-authCacheReadyAt<AUTH_USER_CACHE_TTL&&authUserCache.size){
+    return Promise.resolve(true);
+  }
+  if(!authWarmPromise){
+    authWarmPromise=warmAuthUserCache().finally(()=>{authWarmPromise=null});
+  }
+  return authWarmPromise;
 }
 
 async function saveSession(req,user){
@@ -534,7 +618,7 @@ async function saveSession(req,user){
     user_id:user.user_id,
     platform_role:user.platform_role||'USER',
     session_row:sessionRow
-  },{timeout:18000,attempts:1});
+  },{timeout:15000,attempts:2});
 
   return {
     token,
@@ -551,19 +635,29 @@ async function sessionUser(req){
   if(cached&&cached.expires>Date.now()) return cached.user;
   if(cached) sessionCache.delete(key);
 
-  const resolved=await gas('resolveSession',{token_hash:key},{timeout:30000,attempts:1});
+  const resolved=await gas('resolveSession',{token_hash:key},{timeout:15000,attempts:2});
   if(!resolved?.user) return null;
   sessionCache.set(key,{user:resolved.user,expires:Date.now()+SESSION_CACHE_TTL});
   return resolved.user;
 }
 
-app.get('/health',(req,res)=>res.json({
-  success:true,
-  data:{
-    app:'KIA Backend',
-    version:'0.5.3'
+app.get('/health',async(req,res)=>{
+  if(String(req.query.warm||'')==='1'){
+    await Promise.race([
+      ensureAuthWarm(),
+      new Promise(resolve=>setTimeout(resolve,9000))
+    ]).catch(()=>false);
   }
-}));
+  res.json({
+    success:true,
+    data:{
+      app:'KIA Backend',
+      version:'0.5.4',
+      auth_cache_ready:!!authCacheReadyAt,
+      doku_env:DOKU_ENV
+    }
+  });
+});
 
 // ------------------------------------------------------------------
 // AUTH BASELINE v0.2.5 — LOCK. Do not alter behavior.
@@ -882,10 +976,15 @@ function sendError(res,e){
     INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INCOMPLETE_PROGRAM_UPDATE:400,INVALID_MEDIA_TYPE:400,INVALID_DONATION_AMOUNT:400,INVALID_PAYMENT_METHOD:400,INVALID_CHECKOUT_TOKEN:401,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
     SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,DONATION_ALREADY_PAID:409,PAYMENT_METHOD_ALREADY_ACTIVE:409,PAYMENT_ATTEMPT_LIMIT:429,
-    GATEWAY_TIMEOUT:504,WRITE_BUSY:503
+    GATEWAY_TIMEOUT:504,GATEWAY_NETWORK:503,GATEWAY_HTML_RESPONSE:502,GATEWAY_INVALID_RESPONSE:502,GATEWAY_HTTP_500:503,GATEWAY_HTTP_502:503,GATEWAY_HTTP_503:503,GATEWAY_HTTP_504:504,WRITE_BUSY:503
   };
   const friendly={
-    GATEWAY_TIMEOUT:'Server data merespons terlalu lama. Silakan coba lagi.',WRITE_BUSY:'Sistem sedang menyelesaikan proses lain. Coba lagi sebentar.',
+    GATEWAY_TIMEOUT:'Server data masih menyiapkan respons. KIA akan mencoba kembali secara aman.',
+    GATEWAY_NETWORK:'Koneksi ke server data sedang tidak stabil. Silakan coba lagi.',
+    GATEWAY_HTML_RESPONSE:'Server data sementara mengembalikan halaman sistem, bukan data KIA. Silakan coba lagi.',
+    GATEWAY_INVALID_RESPONSE:'Respons server data sementara tidak valid. Silakan coba lagi.',
+    GATEWAY_HTTP_500:'Server data sedang mengalami gangguan sementara.',GATEWAY_HTTP_502:'Gateway data sedang memulai ulang.',GATEWAY_HTTP_503:'Gateway data belum siap. Silakan coba lagi.',GATEWAY_HTTP_504:'Gateway data merespons terlalu lama.',
+    WRITE_BUSY:'Sistem sedang menyelesaikan proses lain. Coba lagi sebentar.',
     UNAUTHORIZED:'Sesi tidak valid atau kedaluwarsa.',ADMIN_REQUIRED:'Akses admin diperlukan.',
     SUPER_ADMIN_REQUIRED:'Hanya SUPER_ADMIN yang dapat melakukan tindakan ini.',
     PROGRAM_NOT_FOUND:'Program tidak ditemukan.',VERIFICATION_REQUIRED:'Verifikasi penggalang dana harus disetujui terlebih dahulu.',
@@ -993,7 +1092,7 @@ app.get('/api/dashboard/bootstrap',async(req,res)=>{
   try{
     const token_hash=requestTokenHash(req);
     if(!token_hash) return res.status(401).json({success:false,message:'Sesi tidak valid atau kedaluwarsa.'});
-    const data=await gas('dashboardBootstrapFast',{token_hash},{timeout:12000});
+    const data=await gas('dashboardBootstrapFast',{token_hash},{timeout:18000,attempts:2});
     // Pertahankan bootstrap SUPER_ADMIN dari environment bila diperlukan.
     if(data?.user){
       const effective=await applyBootstrapAdmin(data.user);
@@ -1165,7 +1264,7 @@ app.post('/api/programs/:id/updates/:updateId/archive',async(req,res)=>{
 
 app.get('/api/public/bootstrap',async(req,res)=>{
   try{
-    const data=await publicCached('bootstrap',()=>gas('publicBootstrapFast',{}, {timeout:16000,attempts:1}),{freshMs:45000,staleMs:10*60*1000});
+    const data=await publicCached('bootstrap',()=>gas('publicBootstrapFast',{}, {timeout:18000,attempts:2}),{freshMs:45000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -1175,7 +1274,7 @@ app.get('/api/public/programs',async(req,res)=>{
     const page=Number(req.query.page)||1,limit=Number(req.query.limit)||12;
     const search=text(req.query.search,120),category=text(req.query.category,80)||'ALL';
     const key=`programs:${page}:${limit}:${search.toLowerCase()}:${category.toUpperCase()}`;
-    const data=await publicCached(key,()=>gas('publicProgramsFast',{page,limit,search,category},{timeout:16000,attempts:1}),{freshMs:60000,staleMs:10*60*1000});
+    const data=await publicCached(key,()=>gas('publicProgramsFast',{page,limit,search,category},{timeout:18000,attempts:2}),{freshMs:60000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -1183,7 +1282,7 @@ app.get('/api/public/programs',async(req,res)=>{
 app.get('/api/public/programs/:id',async(req,res)=>{
   try{
     const id=String(req.params.id||'');
-    const data=await publicCached(`program:${id}`,()=>gas('publicProgramFast',{program_id:id},{timeout:16000,attempts:1}),{freshMs:60000,staleMs:10*60*1000});
+    const data=await publicCached(`program:${id}`,()=>gas('publicProgramFast',{program_id:id},{timeout:18000,attempts:2}),{freshMs:60000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -1351,7 +1450,18 @@ app.get('/api/payments/status',async(req,res)=>{
       try{
         reconciliation=await reconcilePayment(snapshot.payment,{source:'USER_CHECK'});
         if(reconciliation.checked&&reconciliation.changed){
-          snapshot=await paymentSnapshot(token.donation_id,token.payment_id);
+          const providerStatus=String(reconciliation.provider_status||'').toUpperCase();
+          if(providerStatus==='SUCCESS'){
+            snapshot.payment={...snapshot.payment,status:'PAID',paid_amount:Number(snapshot.payment.requested_amount)||0,paid_at:new Date().toISOString()};
+            snapshot.view={
+              ...snapshot.view,
+              donation:{...snapshot.view.donation,status:'PAID',updated_at:new Date().toISOString()},
+              payment:{...snapshot.view.payment,status:'PAID',paid_amount:Number(snapshot.view.payment?.requested_amount)||0,paid_at:new Date().toISOString()}
+            };
+          }else if(providerStatus==='FAILED'||providerStatus==='EXPIRED'){
+            snapshot.payment={...snapshot.payment,status:providerStatus};
+            snapshot.view={...snapshot.view,payment:{...snapshot.view.payment,status:providerStatus}};
+          }
         }
       }catch(err){
         reconciliation={
@@ -1530,7 +1640,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.3'
+          version:'0.5.4'
         }
       }
     });
@@ -1605,7 +1715,7 @@ app.post('/api/security/logout-all',async(req,res)=>{
 
 app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);
-  setTimeout(()=>warmAuthUserCache(),250);
+  setTimeout(()=>ensureAuthWarm(),250);
   setTimeout(()=>warmPublicCache(),700);
   setTimeout(()=>reconcilePendingPayments(),20000);
   const reconcileTimer=setInterval(()=>reconcilePendingPayments(),DOKU_RECONCILE_INTERVAL_MS);
