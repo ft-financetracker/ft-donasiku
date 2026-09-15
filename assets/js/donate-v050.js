@@ -30,11 +30,14 @@
   async function loadProgram(){
     const id=new URLSearchParams(location.search).get('program_id');
     if(!id){showStatus('Program tidak ditemukan.');return}
+    let cached=null;try{const x=JSON.parse(localStorage.getItem('kia_program_detail_v051_'+id)||'null');if(x&&Date.now()-x.saved_at<6*3600000)cached=x.data}catch{}
+    if(cached?.program){program=cached.program;fillProgram();prefillUser()}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),cached?8000:12000);
     try{
-      const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}`,{cache:'no-store'}).then(x=>x.json());
-      if(!r.success)throw new Error(r.message||'Program tidak ditemukan.');
-      program=r.data.program;fillProgram();prefillUser();
-    }catch(e){showStatus(e.message||'Program belum dapat dimuat.')}
+      const response=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}`,{signal:controller.signal});const r=await response.json();
+      if(!response.ok||!r.success)throw new Error(r.message||'Program tidak ditemukan.');
+      program=r.data.program;try{localStorage.setItem('kia_program_detail_v051_'+id,JSON.stringify({saved_at:Date.now(),data:r.data}))}catch{}fillProgram();prefillUser();
+    }catch(e){if(!cached)showStatus(e.message||'Program belum dapat dimuat.')}finally{clearTimeout(timer)}
   }
 
   async function submit(e){
@@ -42,7 +45,7 @@
     if(!validateStep(1)||!validateStep(2)||!program)return;
     const f=e.currentTarget,btn=$('[data-submit-donation]');
     const payload={program_id:program.program_id,gross_amount:amount(),donor_name:f.elements.donor_name.value.trim(),donor_email:f.elements.donor_email.value.trim(),donor_phone:f.elements.donor_phone.value.trim(),is_anonymous:f.elements.is_anonymous.checked,message:f.elements.message.value.trim(),payment_method:f.elements.payment_method.value};
-    btn.disabled=true;btn.textContent='Menyiapkan…';hideStatus();
+    btn.disabled=true;btn.textContent='Menyiapkan pembayaran…';hideStatus();
     try{
       const r=await KiaAuth.request('/api/donations/checkout',{method:'POST',body:JSON.stringify(payload),timeout:22000});
       location.href='./payment.html?token='+encodeURIComponent(r.data.view_token);

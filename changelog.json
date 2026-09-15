@@ -1,5 +1,34 @@
 [
   {
+    "version": "0.5.1",
+    "date": "2026-09-15",
+    "title": "Fast Public, DOKU Sandbox & Dampak Saya",
+    "new": [
+      "Integrasi backend DOKU Checkout Sandbox siap menggunakan credential Render",
+      "Webhook DOKU tervalidasi signature dan idempotent",
+      "Dampak Saya untuk akun login: level aktivitas, badge privat, dan riwayat dukungan",
+      "Materialized program stats dan Live Donation agar transaksi besar tidak dipindai ulang setiap halaman"
+    ],
+    "improvements": [
+      "Landing, Semua Program, dan Detail Program memakai multi-layer cache + stale-while-revalidate",
+      "Browser menampilkan cache lokal terlebih dahulu lalu refresh di background",
+      "Render melakukan warm public cache saat server aktif",
+      "Pembayaran menampilkan tombol menuju DOKU Checkout ketika provider siap",
+      "Status pembayaran melakukan polling ringan dan berhenti pada status final"
+    ],
+    "fixes": [
+      "Mengurangi risiko Semua Program gagal karena request Spreadsheet terlalu lama",
+      "Menghilangkan scan seluruh donasi PAID pada setiap katalog/detail program",
+      "Live Donation hanya berasal dari materialized event PAID tervalidasi",
+      "DOKU Checkout berstatus FAILED tidak menutup Donation karena customer masih dapat retry atau mengganti channel pembayaran"
+    ],
+    "security": [
+      "Credential DOKU hanya dibaca dari environment Render",
+      "Notifikasi DOKU diverifikasi dengan HMAC-SHA256 dan digest body",
+      "Webhook Request-Id disimpan sebagai event id untuk mencegah pemrosesan ganda"
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-09-15",
     "title": "Donation Checkout & Trust Detail",

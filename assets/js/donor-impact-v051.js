@@ -1,0 +1,13 @@
+(()=>{
+  const $=(s,r=document)=>r.querySelector(s),esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c])),idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);let loaded=false,loading=false;
+  const badgeInfo={LANGKAH_PERTAMA:'Donasi pertama tervalidasi',SAHABAT_PROGRAM:'Mendukung sedikitnya 3 program',KONSISTEN_3_BULAN:'Aktif berbagi pada 3 bulan berbeda',KONSISTEN_6_BULAN:'Aktif berbagi pada 6 bulan berbeda',LINTAS_PROGRAM:'Mendukung sedikitnya 5 program',PROGRAM_TUNTAS:'Pernah mendukung program yang telah selesai'};
+  function render(data){
+    const level=data.level||{},m=data.metrics||{},badges=data.badges||[],recent=data.recent||[];
+    $('[data-impact-level]').textContent=level.label||'Teman KIA';$('[data-impact-donations]').textContent=String(m.paid_donation_count||0);$('[data-impact-programs]').textContent=String(m.programs_supported||0);$('[data-impact-months]').textContent=String(m.active_months||0);$('[data-impact-completed]').textContent=String(m.completed_programs||0);
+    const badgeRoot=$('[data-impact-badges]');badgeRoot.innerHTML=badges.length?badges.map(b=>`<article class="impact-badge"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span><div><strong>${esc(b.label)}</strong><small>${esc(badgeInfo[b.code]||'Badge aktivitas KIA')}</small></div></article>`).join(''):'<div class="empty-state">Badge akan muncul setelah donasi pertama berstatus PAID.</div>';
+    const recentRoot=$('[data-impact-recent]');recentRoot.innerHTML=recent.length?recent.map(x=>`<a class="impact-recent" href="./program.html?id=${encodeURIComponent(x.program_id||'')}"><div><strong>${esc(x.program_name)}</strong><small>${x.paid_at?new Date(x.paid_at).toLocaleDateString('id-ID'):'—'}</small></div><span>${idr(x.amount)}</span></a>`).join(''):'<div class="empty-state">Belum ada riwayat donasi PAID di akun ini.</div>';
+    loaded=true;
+  }
+  async function load(force=false){if(loading||loaded&&!force)return;loading=true;const root=$('[data-impact-root]');if(!loaded)root?.classList.add('is-loading');try{const r=await KiaAuth.request('/api/donor/impact',{timeout:15000});render(r.data||{})}catch(e){if(root)root.innerHTML=`<div class="empty-state">${esc(e.message||'Dampak Saya belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-impact-retry>Coba Lagi</button></div>`;$('[data-impact-retry]')?.addEventListener('click',()=>{loaded=false;load(true)})}finally{loading=false;root?.classList.remove('is-loading')}}
+  window.KiaDonorImpact={load,refresh:()=>{loaded=false;return load(true)}};
+})();

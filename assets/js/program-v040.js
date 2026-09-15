@@ -9,9 +9,10 @@
 
   function imageUrl(m){return m?.public_url||m?.thumbnail_url||program?.cover_image_url||''}
   function daysLeft(end){if(!end)return '—';const diff=Math.ceil((new Date(end).setHours(23,59,59,999)-Date.now())/86400000);return diff<0?'Selesai':`${diff} hari`}
-  function donorCount(){return Number(detail?.transparency?.paid_donations)||0}
+  function donorCount(){return Number(detail?.transparency?.paid_donations ?? program?.paid_donations)||0}
 
   function ownerHtml(){
+    if(detail?._summary_only)return '<div class="empty-room">Memuat profil penggalang…</div>';
     const o=detail?.owner||{};
     const img=o.logo_url||o.avatar_url||'';
     const icon=o.owner_type==='ORGANIZATION'?'account_balance':'person';
@@ -19,18 +20,21 @@
   }
 
   function updatesHtml(){
+    if(detail?._summary_only)return '<div class="empty-room">Memuat perkembangan program…</div>';
     const items=detail?.updates||[];
     if(!items.length)return '<div class="empty-room">Belum ada perkembangan yang dipublikasikan. Saat penggalang mengirim update, progres program akan muncul di sini.</div>';
     return `<div class="timeline">${items.map(x=>`<article class="timeline-item"><div class="timeline-line"><span class="timeline-dot"></span></div><div class="timeline-content"><div class="timeline-date">${esc(date(x.published_at))}</div><h3>${esc(x.title)}</h3><p>${esc(x.content)}</p>${x.image_url?`<img src="${esc(x.image_url)}" alt="Dokumentasi perkembangan">`:''}</div></article>`).join('')}</div>`;
   }
 
   function recentDonationsHtml(){
+    if(detail?._summary_only)return '<div class="empty-room">Memuat donasi tervalidasi terbaru…</div>';
     const items=detail?.recent_donations||[];
     if(!items.length)return '<div class="empty-room">Live Donation akan muncul otomatis setelah pembayaran berhasil tervalidasi.</div>';
     return `<div class="recent-donations">${items.map(x=>`<div class="recent-donation"><strong>${esc(x.donor_label||'Hamba Allah')}</strong><span>${idr(x.amount)}</span></div>`).join('')}</div>`;
   }
 
   function transparencyHtml(){
+    if(detail?._summary_only)return '<div class="empty-room">Memuat data transparansi tervalidasi…</div>';
     const t=detail?.transparency||{};
     return `<div class="transparency-grid"><div class="transparency-metric"><span>Donasi tervalidasi</span><strong>${idr(t.gross_amount)}</strong></div><div class="transparency-metric"><span>Biaya pembayaran tercatat</span><strong>${idr(t.payment_fee_amount)}</strong></div><div class="transparency-metric"><span>Dana bersih tercatat</span><strong>${idr(t.net_recorded_amount)}</strong></div></div><div class="transparency-note"><strong>Catatan transparansi</strong><br>KIA hanya menghitung pembayaran berstatus PAID. Pencairan per program belum ditampilkan sampai modul settlement dan alokasi pencairan program diaktifkan, sehingga angka yang belum dapat diverifikasi tidak ditampilkan.</div>`;
   }
@@ -142,16 +146,36 @@
     }catch(_){ }
   }
 
+  function detailCacheKey(id){return 'kia_program_detail_v051_'+id}
+  function readDetailCache(id){try{const x=JSON.parse(localStorage.getItem(detailCacheKey(id))||'null');return x&&Date.now()-x.saved_at<6*3600000?x.data:null}catch{return null}}
+  function writeDetailCache(id,data){try{localStorage.setItem(detailCacheKey(id),JSON.stringify({saved_at:Date.now(),data}))}catch{}}
+  function summaryFallback(id){
+    try{
+      const bootstrap=JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null')?.data;
+      const fromBootstrap=(bootstrap?.programs||[]).find(x=>String(x.program_id)===String(id));
+      if(fromBootstrap)return {program:fromBootstrap,transparency:{paid_donations:fromBootstrap.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i)||'';if(!key.startsWith('kia_catalog_v051_'))continue;
+        const data=JSON.parse(localStorage.getItem(key)||'null')?.d;
+        const found=(data?.items||[]).find(x=>String(x.program_id)===String(id));
+        if(found)return {program:found,transparency:{paid_donations:found.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
+      }
+    }catch(_){ }
+    return null;
+  }
   async function load(){
     const id=new URLSearchParams(location.search).get('id');
     if(!id){$('[data-program-root]').innerHTML='<div class="empty-state">Program tidak ditemukan.</div>';return}
+    const cached=readDetailCache(id);
+    const fast=cached||summaryFallback(id);
+    if(fast){detail=fast;program=detail.program;render()}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),fast?8000:12000);
     try{
-      const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}`,{cache:'no-store'}).then(x=>x.json());
-      if(!r.success)throw new Error(r.message);
-      detail=r.data||{};
-      program=detail.program;
-      render();
-    }catch(e){$('[data-program-root]').innerHTML=`<div class="empty-state">${esc(e.message||'Program belum dapat dimuat.')}</div>`}
+      const response=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/programs/${encodeURIComponent(id)}`,{signal:controller.signal});
+      const r=await response.json();
+      if(!response.ok||!r.success)throw new Error(r.message||'Program belum dapat dimuat.');
+      detail=r.data||{};program=detail.program;writeDetailCache(id,detail);render();
+    }catch(e){if(!fast)$('[data-program-root]').innerHTML=`<div class="empty-state">${esc(e.message||'Program belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-program-retry>Coba Lagi</button></div>`;$('[data-program-retry]')?.addEventListener('click',load)}finally{clearTimeout(timer)}
   }
 
   document.addEventListener('DOMContentLoaded',()=>{
