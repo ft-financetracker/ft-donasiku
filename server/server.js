@@ -466,7 +466,7 @@ function isGatewayRetryable(err){
 
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw gatewayError('BACKEND_NOT_CONFIGURED',503);
-  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','publicProgramDonationsFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
@@ -652,7 +652,7 @@ app.get('/health',async(req,res)=>{
     success:true,
     data:{
       app:'KIA Backend',
-      version:'0.5.4',
+      version:'0.5.5',
       auth_cache_ready:!!authCacheReadyAt,
       doku_env:DOKU_ENV
     }
@@ -1279,6 +1279,17 @@ app.get('/api/public/programs',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
+app.get('/api/public/programs/:id/donations',async(req,res)=>{
+  try{
+    const id=String(req.params.id||'');
+    const page=Math.max(1,Number(req.query.page)||1);
+    const limit=Math.max(5,Math.min(20,Number(req.query.limit)||10));
+    const key=`program-donations:${id}:${page}:${limit}`;
+    const data=await publicCached(key,()=>gas('publicProgramDonationsFast',{program_id:id,page,limit},{timeout:18000,attempts:2}),{freshMs:30000,staleMs:5*60*1000});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
 app.get('/api/public/programs/:id',async(req,res)=>{
   try{
     const id=String(req.params.id||'');
@@ -1640,7 +1651,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.4'
+          version:'0.5.5'
         }
       }
     });
