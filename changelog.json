@@ -1,5 +1,30 @@
 [
   {
+    "version": "0.5.3",
+    "date": "2026-09-16",
+    "title": "Payment Reliability & Auto Reconciliation",
+    "new": [
+      "Sinkronkan Status memanggil DOKU Check Status API, bukan hanya membaca status Spreadsheet",
+      "Auto reconciliation memeriksa payment DOKU berstatus PENDING secara berkala saat backend aktif",
+      "Payment Attempt ditampilkan jelas agar pergantian metode tidak ambigu"
+    ],
+    "improvements": [
+      "Ganti Metode merender Payment Attempt baru langsung tanpa menunggu reload/cache browser",
+      "Payment SUCCESS dari Check Status memakai jalur commit PAID yang sama dengan webhook sehingga Program Stats, Live Donation, Donor Progress, dan FT Sync tetap konsisten",
+      "Rekonsiliasi provider dibatasi minimal 60 detik dan diberi rate cadence agar tidak membanjiri DOKU"
+    ],
+    "fixes": [
+      "Memulihkan transaksi yang sudah SUCCESS di DOKU tetapi masih PENDING di KIA karena webhook/IPN tidak masuk",
+      "FAILED dan EXPIRED pada payment attempt dapat ditandai tanpa menutup Donation, sehingga donor dapat membuat attempt baru",
+      "Mengurangi kasus Ganti Metode tetapi halaman kembali menampilkan metode/payment attempt lama"
+    ],
+    "security": [
+      "Check Status API ditandatangani server-side memakai Client-Id, Request-Id, Request-Timestamp, dan HMAC signature tanpa mengekspos credential",
+      "PAID tetap hanya berasal dari verifikasi server ke DOKU; redirect browser tidak pernah menentukan status pembayaran",
+      "Reconciliation SUCCESS menggunakan event id deterministik agar pemrosesan berulang tetap idempotent"
+    ]
+  },
+  {
     "version": "0.5.2",
     "date": "2026-09-15",
     "title": "Stable Performance & Payment Recovery Patch",

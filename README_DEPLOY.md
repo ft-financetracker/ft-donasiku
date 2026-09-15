@@ -1,81 +1,71 @@
-# DEPLOY KIA v0.5.2 — STEP BY STEP
+# DEPLOY KIA v0.5.3 — PAYMENT RELIABILITY
 
-> v0.5.0 tetap disimpan sebagai rollback baseline.  
-> v0.5.2 tidak menambah sheet/header baru.
+## 1 — Apps Script
 
-## 1. Apps Script
+**Tidak ada perubahan Apps Script dan tidak ada migration.**
 
-1. Buka Apps Script KIA.
-2. Replace seluruh `Code.gs` dengan:
+Jangan replace `Code.gs`.
+Jangan menjalankan fungsi migration/setup.
 
-```text
-apps-script/Code.gs
-```
+## 2 — GitHub Frontend
 
-3. Save.
-4. **Jangan jalankan `setupKiaDatabase()`.**
-5. Jika `migrateKiaV051()` sudah pernah berhasil pada upgrade v0.5.1, **tidak perlu menjalankan migration lagi**.
-6. Deploy:
+Upload/replace **ISI** folder:
 
 ```text
-Deploy
-→ Manage deployments
-→ deployment lama
-→ Edit
-→ New version
-→ Execute as: Me
-→ Who has access: Anyone
-→ Deploy
+github/
 ```
 
-Pertahankan URL `/exec` yang sama.
-
-## 2. GitHub — upload lengkap
-
-Repository:
+ke ROOT repository:
 
 ```text
 ft-financetracker/ft-donasiku
 ```
 
-**Penting:** kali ini replace **seluruh ISI folder `github/` ke ROOT repo**, termasuk:
+File yang berubah:
 
 ```text
 app-version.json
-service-worker.js
+app.html
 changelog.json
-info.html
+service-worker.js
+assets/js/payment-v050.js
 assets/js/pwa-v040.js
 ```
 
-Ini mencegah kasus backend sudah versi baru tetapi Info Aplikasi masih membaca versi lama.
+Jangan hapus file lain.
 
-Lalu replace folder:
+## 3 — GitHub Backend
+
+Replace:
 
 ```text
-server/
+server/server.js
+server/package.json
+server/.env.example
 ```
 
-Commit ke `main`.
+`server/.env.example` hanya dokumentasi; credential asli tetap berada di Render Environment.
 
-## 3. Render
+## 4 — Render
 
-Tidak perlu membuat service baru. Tunggu auto-deploy dari GitHub.
-
-Environment yang sudah ada tetap dipertahankan:
+Environment lama tetap dipakai:
 
 ```text
+KIA_GAS_URL=...
+KIA_GATEWAY_SECRET=...
+KIA_ALLOWED_ORIGIN=https://ft-financetracker.github.io
 KIA_PUBLIC_APP_URL=https://ft-financetracker.github.io/ft-donasiku
 KIA_DOKU_ENV=sandbox
-KIA_DOKU_CLIENT_ID=<secret di Render>
-KIA_DOKU_SECRET_KEY=<secret di Render>
+KIA_DOKU_CLIENT_ID=<secret Render>
+KIA_DOKU_SECRET_KEY=<secret Render>
+KIA_DOKU_NOTIFY_URL=https://ft-donasiku.onrender.com/api/payments/doku/notify
 ```
 
-Jangan kirim secret ke chat / GitHub.
+Tunggu auto-deploy `Deploy successful`.
 
-## 4. Cek versi
+## 5 — Checkpoint versi
 
-Render:
+Buka:
 
 ```text
 https://ft-donasiku.onrender.com/health
@@ -84,44 +74,71 @@ https://ft-donasiku.onrender.com/health
 Target:
 
 ```text
-0.5.2
+version = 0.5.3
 ```
 
-Info Aplikasi target:
+Info Aplikasi:
 
 ```text
-Versi Terpasang : v0.5.2
-Versi Terbaru   : v0.5.2
-Build           : 52
-Status          : Sudah terbaru
+Versi Terpasang : v0.5.3
+Versi Terbaru   : v0.5.3
+Build           : 53
 ```
 
-## 5. DOKU Notification URL
+## 6 — Recovery transaksi BRI yang SUDAH SUCCESS
 
-Gunakan endpoint yang sama:
+Tidak perlu membuat transaksi baru.
+
+Buka kembali halaman status Payment BRI yang masih `PENDING`, lalu tekan:
 
 ```text
-https://ft-donasiku.onrender.com/api/payments/doku/notify
+Sinkronkan Status
 ```
 
-v0.5.2 menambahkan response aman untuk health/probe URL. Setelah Render v0.5.2 aktif, buka kembali:
+KIA akan:
 
 ```text
-DOKU Sandbox
-→ Settings
-→ Payment Settings
-→ QRIS
-→ Edit
-→ Notification URL
-→ Submit
+payment token
+→ payment_id exact
+→ DOKU Check Status API
+→ SUCCESS
+→ 09_PAYMENTS = PAID
+→ 08_DONATIONS = PAID
+→ 21_PROGRAM_STATS update
+→ 23_LIVE_DONATIONS update
+→ 15_FT_SYNC enqueue
 ```
 
-Jika DOKU tetap menolak saat Submit, catat pesan error persis dari Back Office. Jangan mengubah endpoint secara acak.
+DOKU menyarankan Check Status dipanggil setelah ±60 detik; backend v0.5.3 menerapkan guard tersebut.
 
-## 6. Smoke test
+## 7 — Test Ganti Metode
 
-Gunakan `CHECKPOINT_v0.5.2.md`. Fokus utama:
-- Semua Program tidak perlu F5;
-- Ganti Metode membuat payment attempt baru;
-- DOKU notification URL dapat disimpan;
-- PAID memperbarui Live Donation tepat satu kali.
+Pada Donation PENDING:
+
+```text
+Payment Attempt #1 = metode lama
+→ Ganti Metode
+→ pilih metode berbeda
+→ Payment Attempt #2 tampil LANGSUNG
+```
+
+Target:
+
+- `donation_id` tetap sama;
+- `payment_id` berbeda;
+- `attempt_no` naik;
+- metode aktif langsung berubah di UI;
+- attempt lama tetap tersimpan di `09_PAYMENTS`.
+
+## 8 — Auto reconciliation
+
+Selama Render aktif, backend memeriksa payment DOKU `PENDING` secara berkala.
+Ini fallback, bukan pengganti webhook.
+
+Urutan keandalan:
+
+```text
+1. Webhook DOKU
+2. Check Status saat halaman status dibuka / tombol Sinkronkan Status
+3. Auto reconciliation backend
+```
