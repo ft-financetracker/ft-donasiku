@@ -103,30 +103,68 @@ function refreshCachedUser(user){
   }
 }
 
-async function saveSession(req,userId){
+const authUserCache=new Map();
+const AUTH_USER_CACHE_TTL=5*60*1000;
+
+function cacheAuthUserRow(user){
+  const email=normEmail(user?.email);
+  if(!email||!user?.user_id) return;
+  authUserCache.set(email,{user:{...user},expires:Date.now()+AUTH_USER_CACHE_TTL});
+}
+
+async function lookupAuthUser(email){
+  const key=normEmail(email);
+  const cached=authUserCache.get(key);
+  if(cached&&cached.expires>Date.now()) return cached.user;
+  if(cached) authUserCache.delete(key);
+
+  const user=await gas('findOne',{
+    sheet:'01_USERS',
+    filters:{email:key,status:'ACTIVE'}
+  },{timeout:15000,attempts:1});
+
+  if(user) cacheAuthUserRow(user);
+  return user;
+}
+
+async function warmAuthUserCache(){
+  try{
+    const rows=await gas('listWhere',{
+      sheet:'01_USERS',
+      filters:{status:'ACTIVE'},
+      limit:5000
+    },{timeout:20000,attempts:1});
+    (rows||[]).forEach(cacheAuthUserRow);
+  }catch(err){
+    console.warn('AUTH_CACHE_WARM_FAILED',err.message);
+  }
+}
+
+async function saveSession(req,user){
   const now=new Date().toISOString();
   const token=crypto.randomBytes(32).toString('base64url');
-  const session_id=stableSessionId(userId,deviceId(req));
+  const session_id=stableSessionId(user.user_id,deviceId(req));
+  const sessionRow={
+    session_id,
+    user_id:user.user_id,
+    token_hash:tokenHash(token),
+    status:'ACTIVE',
+    expires_at:new Date(Date.now()+7*864e5).toISOString(),
+    last_seen_at:now,
+    created_at:now,
+    revoked_at:''
+  };
 
-  const result=await gas('upsert',{
-    sheet:'03_SESSIONS',
-    match:{session_id},
-    preserveFields:['session_id','created_at'],
-    row:{
-      session_id,
-      user_id:userId,
-      token_hash:tokenHash(token),
-      status:'ACTIVE',
-      expires_at:new Date(Date.now()+7*864e5).toISOString(),
-      last_seen_at:now,
-      created_at:now,
-      revoked_at:''
-    }
-  },{timeout:30000,attempts:1});
+  const result=await gas('authLoginCommitFast',{
+    user_id:user.user_id,
+    platform_role:user.platform_role||'USER',
+    session_row:sessionRow
+  },{timeout:18000,attempts:1});
 
   return {
     token,
-    session:result.row
+    session:result.session||sessionRow,
+    user:result.user||user
   };
 }
 
@@ -148,7 +186,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.4.1'
+    version:'0.4.2'
   }
 }));
 
@@ -272,8 +310,9 @@ app.post('/api/auth/register',async(req,res)=>{
     const registeredUser=await applyBootstrapAdmin({
       user_id,email,full_name,account_type,platform_role:'USER'
     });
-    const auth=await saveSession(req,user_id);
-    cacheSessionToken(auth.token,{user_id,email,phone:phone||'',full_name,account_type,platform_role:'USER',status:'ACTIVE'});
+    const auth=await saveSession(req,{...registeredUser,user_id,email,phone:phone||'',full_name,account_type});
+    cacheAuthUserRow({...registeredUser,user_id,email,phone:phone||'',full_name,account_type});
+    cacheSessionToken(auth.token,{user_id,email,phone:phone||'',full_name,account_type,platform_role:(auth.user?.platform_role||registeredUser.platform_role||'USER'),status:'ACTIVE'});
 
     res.status(201).json({
       success:true,
@@ -299,13 +338,7 @@ app.post('/api/auth/login',async(req,res)=>{
   try{
     const email=normEmail(req.body.email);
 
-    const u=await gas('findOne',{
-      sheet:'01_USERS',
-      filters:{
-        email,
-        status:'ACTIVE'
-      }
-    },{timeout:30000,attempts:1});
+    const u=await lookupAuthUser(email);
 
     if(!u||!verifyPassword(req.body.password,u.password_hash)){
       return res.status(401).json({
@@ -314,38 +347,35 @@ app.post('/api/auth/login',async(req,res)=>{
       });
     }
 
-    const effectiveUser=await applyBootstrapAdmin(u);
-    const now=new Date().toISOString();
+    const configured=String(process.env.KIA_SUPER_ADMIN_EMAIL||'').trim().toLowerCase();
+    const effectiveUser={
+      ...u,
+      platform_role:(configured&&email===configured)
+        ? 'SUPER_ADMIN'
+        : (u.platform_role||'USER')
+    };
 
-    const auth=await saveSession(req,effectiveUser.user_id);
-    cacheSessionToken(auth.token,effectiveUser);
+    const auth=await saveSession(req,effectiveUser);
+    const committedUser={...effectiveUser,...(auth.user||{})};
+    cacheAuthUserRow(committedUser);
+    cacheSessionToken(auth.token,committedUser);
 
     res.json({
       success:true,
       data:{
         token:auth.token,
         user:{
-          user_id:effectiveUser.user_id,
-          email:effectiveUser.email,
-          full_name:effectiveUser.full_name,
-          account_type:effectiveUser.account_type,
-          platform_role:effectiveUser.platform_role||'USER'
+          user_id:committedUser.user_id,
+          email:committedUser.email,
+          full_name:committedUser.full_name,
+          account_type:committedUser.account_type,
+          platform_role:committedUser.platform_role||'USER'
         }
       }
     });
 
-    gas('update',{
-      sheet:'01_USERS',
-      idField:'user_id',
-      id:u.user_id,
-      patch:{
-        last_login_at:now,
-        updated_at:now
-      }
-    }).catch(err=>console.error('LAST_LOGIN_UPDATE_FAILED',err.message));
-
   }catch(e){
-    res.status(500).json({success:false,message:e.message});
+    sendError(res,e);
   }
 });
 
@@ -458,6 +488,7 @@ async function applyBootstrapAdmin(user){
   await gas('update',{sheet:'01_USERS',idField:'user_id',id:user.user_id,patch},{timeout:30000,attempts:1});
   const nextUser={...user,...patch};
   refreshCachedUser(nextUser);
+  cacheAuthUserRow(nextUser);
   console.log('KIA_BOOTSTRAP_SUPER_ADMIN',user.email);
   return nextUser;
 }
@@ -476,10 +507,10 @@ function sendError(res,e){
     INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INVALID_MEDIA_TYPE:400,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
     SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,
-    GATEWAY_TIMEOUT:504
+    GATEWAY_TIMEOUT:504,WRITE_BUSY:503
   };
   const friendly={
-    GATEWAY_TIMEOUT:'Server data merespons terlalu lama. Data lokal tetap aman; silakan coba lagi.',
+    GATEWAY_TIMEOUT:'Server data merespons terlalu lama. Silakan coba lagi.',WRITE_BUSY:'Sistem sedang menyelesaikan proses lain. Coba lagi sebentar.',
     UNAUTHORIZED:'Sesi tidak valid atau kedaluwarsa.',ADMIN_REQUIRED:'Akses admin diperlukan.',
     SUPER_ADMIN_REQUIRED:'Hanya SUPER_ADMIN yang dapat melakukan tindakan ini.',
     PROGRAM_NOT_FOUND:'Program tidak ditemukan.',VERIFICATION_REQUIRED:'Verifikasi penggalang dana harus disetujui terlebih dahulu.',
@@ -847,7 +878,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.4.1'
+          version:'0.4.2'
         }
       }
     });
@@ -868,7 +899,7 @@ app.post('/api/admin/users/:id/role',async(req,res)=>{
     const token_hash=requestTokenHash(req);
     if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
     const data=await gas('updateRoleFast',{token_hash,target_id:req.params.id,platform_role:text(req.body.platform_role,40)},{timeout:12000});
-    if(data?.user) refreshCachedUser(data.user);
+    if(data?.user){refreshCachedUser(data.user);cacheAuthUserRow(data.user);}
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -907,7 +938,9 @@ app.post('/api/security/change-password',async(req,res)=>{
     if(next.length<10) throw httpError(400,'Password baru minimal 10 karakter.','WEAK_PASSWORD');
     const fresh=await gas('findOne',{sheet:'01_USERS',filters:{user_id:u.user_id,status:'ACTIVE'}},{timeout:9000});
     if(!fresh||!verifyPassword(current,fresh.password_hash)) throw httpError(401,'Password saat ini tidak sesuai.','INVALID_CURRENT_PASSWORD');
-    await gas('update',{sheet:'01_USERS',idField:'user_id',id:u.user_id,patch:{password_hash:hashPassword(next),updated_at:new Date().toISOString()}},{timeout:12000});
+    const password_hash=hashPassword(next);
+    await gas('update',{sheet:'01_USERS',idField:'user_id',id:u.user_id,patch:{password_hash,updated_at:new Date().toISOString()}},{timeout:15000,attempts:1});
+    cacheAuthUserRow({...fresh,password_hash});
     res.json({success:true,data:{changed:true}});
   }catch(e){sendError(res,e)}
 });
@@ -918,4 +951,7 @@ app.post('/api/security/logout-all',async(req,res)=>{
   try{const token_hash=requestTokenHash(req);const data=await gas('revokeAllSessionsFast',{token_hash},{timeout:12000});sessionCache.clear();res.json({success:true,data})}catch(e){sendError(res,e)}
 });
 
-app.listen(PORT,()=>console.log(`KIA backend ${PORT}`));
+app.listen(PORT,()=>{
+  console.log(`KIA backend ${PORT}`);
+  setTimeout(()=>warmAuthUserCache(),250);
+});
