@@ -186,7 +186,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.4.2'
+    version:'0.4.3'
   }
 }));
 
@@ -878,7 +878,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.4.2'
+          version:'0.4.3'
         }
       }
     });
