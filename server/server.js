@@ -466,7 +466,7 @@ function isGatewayRetryable(err){
 
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw gatewayError('BACKEND_NOT_CONFIGURED',503);
-  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','publicProgramDonationsFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','publicProgramDonationsFast','publicDonationSocialFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
@@ -652,7 +652,7 @@ app.get('/health',async(req,res)=>{
     success:true,
     data:{
       app:'KIA Backend',
-      version:'0.5.5',
+      version:'0.5.6',
       auth_cache_ready:!!authCacheReadyAt,
       doku_env:DOKU_ENV
     }
@@ -922,6 +922,18 @@ const PROGRAM_STATUSES=new Set(['DRAFT','PENDING_REVIEW','APPROVED','ACTIVE','PA
 
 function text(value,max=5000){
   return String(value??'').trim().slice(0,max);
+}
+
+const socialWriteRate=new Map();
+function allowSocialWrite(key,windowMs){
+  const now=Date.now();
+  const prev=Number(socialWriteRate.get(key)||0);
+  if(now-prev<windowMs) return false;
+  socialWriteRate.set(key,now);
+  if(socialWriteRate.size>2000){
+    for(const [k,v] of socialWriteRate.entries()) if(now-v>10*60*1000) socialWriteRate.delete(k);
+  }
+  return true;
 }
 function positiveAmount(value){
   const n=Number(value);
@@ -1298,6 +1310,59 @@ app.get('/api/public/programs/:id',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
+app.get('/api/public/donations/:id/social',async(req,res)=>{
+  try{
+    const donationId=text(req.params.id,180);
+    const data=await publicCached(`donation-social:${donationId}`,()=>gas('publicDonationSocialFast',{donation_id:donationId},{timeout:18000,attempts:2}),{freshMs:10000,staleMs:60000});
+    let viewer={authenticated:false,loved:false};
+    const user=await sessionUser(req).catch(()=>null);
+    if(user){
+      const reaction=await gas('findOne',{sheet:'24_DONATION_REACTIONS',filters:{donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE',status:'ACTIVE'}},{timeout:10000,attempts:1}).catch(()=>null);
+      viewer={authenticated:true,loved:!!reaction};
+    }
+    res.json({success:true,data:{...data,viewer}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/social/donations/:id/love',async(req,res)=>{
+  try{
+    const user=await sessionUser(req);
+    if(!user) return res.status(401).json({success:false,message:'Masuk ke akun KIA untuk memberi love.'});
+    const donationId=text(req.params.id,180);
+    if(!allowSocialWrite(`love:${user.user_id}:${donationId}`,700)) return res.status(429).json({success:false,message:'Terlalu cepat. Coba lagi sebentar.'});
+    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:donationId,status:'PAID'}},{timeout:12000,attempts:1});
+    if(!donation) return res.status(404).json({success:false,message:'Donasi tervalidasi tidak ditemukan.'});
+    const existing=await gas('findOne',{sheet:'24_DONATION_REACTIONS',filters:{donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE'}},{timeout:12000,attempts:1});
+    const now=new Date().toISOString();
+    let liked=true;
+    if(existing){
+      liked=String(existing.status||'').toUpperCase()!=='ACTIVE';
+      await gas('update',{sheet:'24_DONATION_REACTIONS',idField:'reaction_id',id:existing.reaction_id,patch:{status:liked?'ACTIVE':'REMOVED',updated_at:now}},{timeout:15000,attempts:1});
+    }else{
+      await gas('insert',{sheet:'24_DONATION_REACTIONS',row:{reaction_id:id('rct'),donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE',status:'ACTIVE',created_at:now,updated_at:now}},{timeout:15000,attempts:1});
+    }
+    clearPublicResponseCache();
+    res.json({success:true,data:{liked}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/social/donations/:id/messages',async(req,res)=>{
+  try{
+    const user=await sessionUser(req);
+    if(!user) return res.status(401).json({success:false,message:'Masuk ke akun KIA untuk mengirim doa atau pesan.'});
+    const donationId=text(req.params.id,180);
+    const message=text(req.body?.message,280);
+    if(!message) return res.status(400).json({success:false,message:'Tulis doa atau pesan terlebih dahulu.'});
+    if(!allowSocialWrite(`msg:${user.user_id}:${donationId}`,8000)) return res.status(429).json({success:false,message:'Pesan baru dapat dikirim lagi beberapa detik lagi.'});
+    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:donationId,status:'PAID'}},{timeout:12000,attempts:1});
+    if(!donation) return res.status(404).json({success:false,message:'Donasi tervalidasi tidak ditemukan.'});
+    const now=new Date().toISOString();
+    await gas('insert',{sheet:'25_DONATION_MESSAGES',row:{message_id:id('msg'),donation_id:donationId,user_id:user.user_id,display_name:text(user.full_name,140)||'Pengguna KIA',message,status:'ACTIVE',created_at:now,updated_at:now}},{timeout:15000,attempts:1});
+    clearPublicResponseCache();
+    res.status(201).json({success:true,data:{created:true}});
+  }catch(e){sendError(res,e)}
+});
+
 
 app.post('/api/donations/checkout',async(req,res)=>{
   try{
@@ -1651,7 +1716,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.5'
+          version:'0.5.6'
         }
       }
     });
