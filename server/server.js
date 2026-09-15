@@ -23,6 +23,10 @@ const DOKU_SECRET_KEY=String(process.env.KIA_DOKU_SECRET_KEY||'').trim();
 const DOKU_NOTIFY_URL=String(process.env.KIA_DOKU_NOTIFY_URL||'').trim();
 const DOKU_API_BASE=DOKU_ENV==='production'?'https://api.doku.com':'https://api-sandbox.doku.com';
 const DOKU_CHECKOUT_TARGET='/checkout/v1/payment';
+const DOKU_STATUS_TARGET_PREFIX='/orders/v1/status/';
+const DOKU_STATUS_MIN_AGE_MS=60*1000;
+const DOKU_RECONCILE_INTERVAL_MS=2*60*1000;
+const DOKU_RECONCILE_MAX_PER_RUN=8;
 
 app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-Origin',ALLOWED_ORIGIN);
@@ -186,6 +190,207 @@ function verifyDokuNotification(req){
   const expected=hmacDokuSignature({clientId,requestId,timestamp,target:req.path,digest:sha256Base64(raw),secret:DOKU_SECRET_KEY});
   if(!safeEqualString(signature,expected)) throw httpError(401,'Signature DOKU tidak valid.','DOKU_INVALID_SIGNATURE');
   return {requestId,raw,payloadHash:sha256Hex(raw)};
+}
+
+function paymentIsTerminal(status){
+  return ['PAID','FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(String(status||'').toUpperCase());
+}
+
+function dokuStatusPayload(out,identifier,requestId){
+  const response=out?.response||out||{};
+  const order=response?.order||out?.order||{};
+  const transaction=response?.transaction||out?.transaction||{};
+  const status=String(transaction?.status||'').toUpperCase();
+  return {
+    requestId,
+    identifier:String(identifier||''),
+    invoice:String(order?.invoice_number||identifier||''),
+    amount:Number(order?.amount)||0,
+    status,
+    paidAt:String(transaction?.date||''),
+    providerReference:String(transaction?.original_request_id||transaction?.identifier||''),
+    raw:out
+  };
+}
+
+async function dokuCheckStatus(identifier){
+  if(!dokuConfigured()) throw httpError(503,'DOKU belum dikonfigurasi.','DOKU_NOT_CONFIGURED');
+  const value=String(identifier||'').trim();
+  if(!value) throw httpError(400,'Reference pembayaran DOKU belum tersedia.','DOKU_STATUS_REFERENCE_MISSING');
+
+  const requestId=crypto.randomUUID();
+  const timestamp=new Date().toISOString().replace(/\.\d{3}Z$/,'Z');
+  const target=DOKU_STATUS_TARGET_PREFIX+encodeURIComponent(value);
+  const signature=hmacDokuSignature({
+    clientId:DOKU_CLIENT_ID,
+    requestId,
+    timestamp,
+    target,
+    secret:DOKU_SECRET_KEY
+  });
+
+  const response=await fetch(DOKU_API_BASE+target,{
+    method:'GET',
+    headers:{
+      'Accept':'application/json',
+      'Client-Id':DOKU_CLIENT_ID,
+      'Request-Id':requestId,
+      'Request-Timestamp':timestamp,
+      'Signature':signature
+    },
+    signal:AbortSignal.timeout(15000)
+  });
+
+  let out={};
+  try{out=await response.json()}catch{out={}}
+
+  if(!response.ok){
+    const message=Array.isArray(out?.error_messages)
+      ? out.error_messages.join('; ')
+      : String(out?.message||out?.error?.message||`DOKU_STATUS_HTTP_${response.status}`);
+    const err=new Error(message||'DOKU_STATUS_FAILED');
+    err.code='DOKU_STATUS_FAILED';
+    err.httpStatus=response.status;
+    throw err;
+  }
+
+  const parsed=dokuStatusPayload(out,value,requestId);
+  if(!parsed.status){
+    const err=new Error('DOKU_STATUS_EMPTY');
+    err.code='DOKU_STATUS_EMPTY';
+    throw err;
+  }
+  return parsed;
+}
+
+function reconciliationEventId(invoice,status){
+  return 'inq_'+sha256Hex(`${invoice}|${status}`).slice(0,36);
+}
+
+async function applyDokuStatus(payment,inquiry,{source='STATUS_API'}={}){
+  const providerStatus=String(inquiry?.status||'').toUpperCase();
+  if(!providerStatus) return {changed:false,provider_status:'UNKNOWN'};
+
+  if(providerStatus==='SUCCESS'){
+    const invoice=String(payment?.provider_invoice_number||inquiry?.invoice||'');
+    const raw=JSON.stringify(inquiry?.raw||{});
+    const data=await gas('commitDokuPaymentFast',{event:{
+      event_id:reconciliationEventId(invoice,'SUCCESS'),
+      provider_invoice_number:invoice,
+      provider_reference:inquiry?.providerReference||payment?.provider_reference||inquiry?.requestId||'',
+      status:'SUCCESS',
+      amount:Number(inquiry?.amount)||Number(payment?.requested_amount)||0,
+      fee_amount:Number(payment?.fee_amount)||0,
+      paid_at:inquiry?.paidAt||new Date().toISOString(),
+      payload_hash:sha256Hex(raw),
+      payload_json:raw,
+      source
+    }},{timeout:18000,attempts:1});
+    clearPublicResponseCache();
+    return {changed:true,provider_status:'SUCCESS',data};
+  }
+
+  if(providerStatus==='FAILED'||providerStatus==='EXPIRED'){
+    const localStatus=providerStatus;
+    if(String(payment?.status||'').toUpperCase()!==localStatus){
+      await gas('update',{
+        sheet:'09_PAYMENTS',
+        idField:'payment_id',
+        id:payment.payment_id,
+        patch:{
+          status:localStatus,
+          updated_at:new Date().toISOString()
+        }
+      },{timeout:12000,attempts:1});
+    }
+    return {changed:true,provider_status:providerStatus,local_status:localStatus};
+  }
+
+  // PENDING/TIMEOUT/REDIRECT tidak mengubah Donation. Attempt tetap menunggu.
+  if(String(payment?.status||'').toUpperCase()==='CREATED'&&providerStatus==='PENDING'){
+    await gas('update',{
+      sheet:'09_PAYMENTS',
+      idField:'payment_id',
+      id:payment.payment_id,
+      patch:{status:'PENDING',updated_at:new Date().toISOString()}
+    },{timeout:12000,attempts:1});
+  }
+
+  return {changed:false,provider_status:providerStatus};
+}
+
+async function paymentSnapshot(donationId,paymentId){
+  const [view,payment]=await Promise.all([
+    gas('publicPaymentStatusFast',{donation_id:donationId,payment_id:paymentId},{timeout:12000,attempts:1}),
+    gas('findOne',{sheet:'09_PAYMENTS',filters:{payment_id:paymentId,donation_id:donationId}},{timeout:10000,attempts:1})
+  ]);
+  if(!payment) throw httpError(404,'Payment tidak ditemukan.','PAYMENT_NOT_FOUND');
+  return {view,payment};
+}
+
+function paymentAgeMs(payment){
+  const ts=Date.parse(payment?.created_at||payment?.updated_at||'');
+  return Number.isFinite(ts)?Math.max(0,Date.now()-ts):Number.POSITIVE_INFINITY;
+}
+
+async function reconcilePayment(payment,{source='STATUS_API'}={}){
+  if(!payment||paymentIsTerminal(payment.status)||!dokuConfigured()){
+    return {checked:false,reason:'NOT_REQUIRED'};
+  }
+  if(paymentAgeMs(payment)<DOKU_STATUS_MIN_AGE_MS){
+    return {
+      checked:false,
+      reason:'WAIT_60_SECONDS',
+      retry_after_ms:Math.max(0,DOKU_STATUS_MIN_AGE_MS-paymentAgeMs(payment))
+    };
+  }
+
+  const identifier=String(payment.provider_invoice_number||payment.provider_reference||'').trim();
+  if(!identifier) return {checked:false,reason:'REFERENCE_MISSING'};
+
+  const inquiry=await dokuCheckStatus(identifier);
+  const applied=await applyDokuStatus(payment,inquiry,{source});
+  return {
+    checked:true,
+    source,
+    provider_status:inquiry.status,
+    identifier,
+    changed:!!applied.changed
+  };
+}
+
+let autoReconcileRunning=false;
+async function reconcilePendingPayments(){
+  if(autoReconcileRunning||!dokuConfigured()) return;
+  autoReconcileRunning=true;
+  try{
+    const rows=await gas('listWhere',{
+      sheet:'09_PAYMENTS',
+      filters:{provider:'DOKU',status:'PENDING'},
+      limit:120
+    },{timeout:12000,attempts:1});
+
+    const candidates=(Array.isArray(rows)?rows:[])
+      .filter(row=>row?.payment_id&&row?.provider_invoice_number&&paymentAgeMs(row)>=DOKU_STATUS_MIN_AGE_MS)
+      .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))
+      .slice(0,DOKU_RECONCILE_MAX_PER_RUN);
+
+    for(const payment of candidates){
+      try{
+        const result=await reconcilePayment(payment,{source:'AUTO_RECONCILE'});
+        if(result?.checked&&result?.provider_status!=='PENDING'){
+          console.log('DOKU_AUTO_RECONCILE',payment.payment_id,result.provider_status);
+        }
+      }catch(err){
+        console.warn('DOKU_AUTO_RECONCILE_FAILED',payment.payment_id,err?.message||err);
+      }
+      await new Promise(resolve=>setTimeout(resolve,180));
+    }
+  }catch(err){
+    console.warn('DOKU_AUTO_RECONCILE_SCAN_FAILED',err?.message||err);
+  }finally{
+    autoReconcileRunning=false;
+  }
 }
 
 const publicResponseCache=new Map();
@@ -356,7 +561,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.5.2'
+    version:'0.5.3'
   }
 }));
 
@@ -676,7 +881,7 @@ function sendError(res,e){
     PROGRAM_MEDIA_NOT_FOUND:404,PROGRAM_UPDATE_NOT_FOUND:404,DONATION_NOT_FOUND:404,PAYMENT_NOT_FOUND:404,REVISION_NOT_FOUND:404,
     INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INCOMPLETE_PROGRAM_UPDATE:400,INVALID_MEDIA_TYPE:400,INVALID_DONATION_AMOUNT:400,INVALID_PAYMENT_METHOD:400,INVALID_CHECKOUT_TOKEN:401,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
-    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,DONATION_ALREADY_PAID:409,PAYMENT_ATTEMPT_LIMIT:429,
+    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,DONATION_ALREADY_PAID:409,PAYMENT_METHOD_ALREADY_ACTIVE:409,PAYMENT_ATTEMPT_LIMIT:429,
     GATEWAY_TIMEOUT:504,WRITE_BUSY:503
   };
   const friendly={
@@ -688,7 +893,7 @@ function sendError(res,e){
     REVISION_NOT_PENDING:'Revisi ini sudah diproses.',
     INVALID_DONATION_AMOUNT:'Nominal donasi minimal Rp1.000.',
     INVALID_PAYMENT_METHOD:'Metode pembayaran belum didukung.',
-    DONATION_ALREADY_PAID:'Donasi ini sudah dibayar.',PAYMENT_ATTEMPT_LIMIT:'Batas percobaan metode pembayaran telah tercapai. Silakan buat donasi baru jika masih diperlukan.',
+    DONATION_ALREADY_PAID:'Donasi ini sudah dibayar.',PAYMENT_METHOD_ALREADY_ACTIVE:'Metode tersebut sedang aktif. Pilih metode pembayaran yang berbeda.',PAYMENT_ATTEMPT_LIMIT:'Batas percobaan metode pembayaran telah tercapai. Silakan buat donasi baru jika masih diperlukan.',
     INVALID_CHECKOUT_TOKEN:'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.',
     INCOMPLETE_PROGRAM_UPDATE:'Judul dan isi perkembangan wajib diisi.'
   };
@@ -1060,6 +1265,9 @@ app.post('/api/payments/retry',async(req,res)=>{
 
     const current=await gas('publicPaymentStatusFast',{donation_id:token.donation_id,payment_id:token.payment_id},{timeout:12000,attempts:1});
     if(String(current?.donation?.status||'').toUpperCase()==='PAID') throw httpError(409,'Donasi ini sudah dibayar.','DONATION_ALREADY_PAID');
+    if(String(current?.payment?.payment_method||'').toUpperCase()===payment_method&&!paymentIsTerminal(current?.payment?.status)){
+      throw httpError(409,'Metode tersebut sedang aktif. Pilih metode pembayaran yang berbeda.','PAYMENT_METHOD_ALREADY_ACTIVE');
+    }
 
     const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:token.donation_id}},{timeout:10000,attempts:1});
     if(!donation) throw httpError(404,'Donasi tidak ditemukan.','DONATION_NOT_FOUND');
@@ -1135,8 +1343,35 @@ app.get('/api/payments/status',async(req,res)=>{
   try{
     const token=verifyCheckoutViewToken(req.query.token);
     if(!token) throw httpError(401,'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.','INVALID_CHECKOUT_TOKEN');
-    const data=await gas('publicPaymentStatusFast',{donation_id:token.donation_id,payment_id:token.payment_id},{timeout:12000,attempts:1});
-    res.json({success:true,data:{...data,provider_ready:!!data?.payment?.payment_url,doku_configured:dokuConfigured()}});
+
+    let snapshot=await paymentSnapshot(token.donation_id,token.payment_id);
+    let reconciliation={checked:false,reason:'LOCAL_ONLY'};
+
+    if(String(req.query.refresh||'')==='1'&&!paymentIsTerminal(snapshot.payment.status)){
+      try{
+        reconciliation=await reconcilePayment(snapshot.payment,{source:'USER_CHECK'});
+        if(reconciliation.checked&&reconciliation.changed){
+          snapshot=await paymentSnapshot(token.donation_id,token.payment_id);
+        }
+      }catch(err){
+        reconciliation={
+          checked:true,
+          failed:true,
+          reason:err?.code||'DOKU_STATUS_FAILED',
+          message:err?.message||'Status DOKU belum dapat diperiksa.'
+        };
+        console.warn('DOKU_USER_RECONCILE_FAILED',token.payment_id,err?.message||err);
+      }
+    }
+
+    const data=snapshot.view;
+    res.json({success:true,data:{
+      ...data,
+      provider_ready:!!data?.payment?.payment_url,
+      doku_configured:dokuConfigured(),
+      doku_env:DOKU_ENV,
+      reconciliation
+    }});
   }catch(e){sendError(res,e)}
 });
 
@@ -1295,7 +1530,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.2'
+          version:'0.5.3'
         }
       }
     });
@@ -1372,4 +1607,7 @@ app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);
   setTimeout(()=>warmAuthUserCache(),250);
   setTimeout(()=>warmPublicCache(),700);
+  setTimeout(()=>reconcilePendingPayments(),20000);
+  const reconcileTimer=setInterval(()=>reconcilePendingPayments(),DOKU_RECONCILE_INTERVAL_MS);
+  reconcileTimer.unref?.();
 });
