@@ -141,6 +141,14 @@
     });
   }
 
+  function renderLiveDonations(items){
+    const root=$('[data-live-donations]');
+    if(!root)return;
+    const rows=Array.isArray(items)?items:[];
+    if(!rows.length){root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Belum ada donasi tervalidasi. Live Donation akan terisi otomatis setelah pembayaran berstatus PAID.</div>';return}
+    root.innerHTML=rows.map(x=>`<article class="card live-donation-card"><div class="live-donation-icon"><span class="material-symbols-outlined">volunteer_activism</span></div><div><strong>${esc(x.donor_label||'Hamba Allah')}</strong><p>${idr(x.amount)} · ${esc(x.program_name||'Program KIA')}</p></div></article>`).join('');
+  }
+
   function renderFaq(items){
     const root=$('[data-faq-preview]');
     root.innerHTML=(items||[]).slice(0,4).map(x=>
@@ -160,6 +168,7 @@
       restartHeroTimer();
 
       renderPrograms(r.data.programs||[]);
+      renderLiveDonations(r.data.live_donations||[]);
       renderFaq(r.data.faqs||[]);
       $('[data-stat-paid]').textContent=idr(r.data.stats?.total_paid_amount);
       $('[data-stat-programs]').textContent=String(r.data.stats?.active_programs||0);
@@ -170,6 +179,7 @@
       renderHero();
       restartHeroTimer();
       $('[data-public-programs]').innerHTML='<div class="empty-state" style="grid-column:1/-1">Program belum dapat dimuat. Silakan coba lagi.</div>';
+      if($('[data-live-donations]'))$('[data-live-donations]').innerHTML='<div class="empty-state" style="grid-column:1/-1">Live Donation belum dapat dimuat.</div>';
     }
   }
 

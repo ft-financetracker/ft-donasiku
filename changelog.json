@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-09-15",
+    "title": "Donation Checkout & Trust Detail",
+    "new": [
+      "Halaman program memiliki room Ringkasan, Tentang, Penggalang, Perkembangan, dan Transparansi",
+      "Penggalang dapat mempublikasikan perkembangan program dari Dashboard",
+      "Donation Checkout tiga tahap: nominal, data donatur, dan metode pembayaran",
+      "Payment Shell memisahkan Donation dan Payment Attempt sebelum integrasi DOKU Sandbox",
+      "Live Donation disiapkan dan otomatis membaca donasi berstatus PAID"
+    ],
+    "improvements": [
+      "Hero desktop dibuat sedikit lebih rendah dan konten ditempatkan lebih proporsional",
+      "Alignment menu dan tombol kanan atas landing diperhalus",
+      "Detail penggalang hanya menampilkan data publik dan status verifikasi",
+      "Transparansi dana hanya menampilkan angka yang dapat dihitung dari transaksi tervalidasi"
+    ],
+    "fixes": []
+  },
+  {
     "version": "0.4.4",
     "date": "2026-09-15",
     "title": "Info Aplikasi & PWA Install Hotfix",

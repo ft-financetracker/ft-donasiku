@@ -1,8 +1,8 @@
 {
-  "version": "0.4.4",
-  "build": 44,
+  "version": "0.5.0",
+  "build": 50,
   "released_at": "2026-09-15",
   "required_update": false,
-  "minimum_supported_version": "0.3.7",
-  "summary": "Hotfix Info Aplikasi: tombol update tidak ambigu dan install PWA lebih andal"
+  "minimum_supported_version": "0.4.2",
+  "summary": "Program Trust Detail, Live Donation ready, Donation Checkout, dan Payment Shell DOKU"
 }
