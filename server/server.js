@@ -52,6 +52,41 @@ function deviceId(req){
   return 'legacy-browser';
 }
 
+
+function checkoutTokenSecret(){
+  return process.env.KIA_PAYMENT_VIEW_SECRET || GATEWAY_SECRET || 'kia-payment-view';
+}
+
+function signCheckoutViewToken(payload){
+  const body=Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig=crypto.createHmac('sha256',checkoutTokenSecret()).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+
+function verifyCheckoutViewToken(token){
+  try{
+    const [body,sig]=String(token||'').split('.');
+    if(!body||!sig) return null;
+    const expected=crypto.createHmac('sha256',checkoutTokenSecret()).update(body).digest('base64url');
+    const a=Buffer.from(sig);
+    const b=Buffer.from(expected);
+    if(a.length!==b.length||!crypto.timingSafeEqual(a,b)) return null;
+    const payload=JSON.parse(Buffer.from(body,'base64url').toString('utf8'));
+    if(!payload?.donation_id||!payload?.payment_id||Number(payload.exp||0)<Date.now()) return null;
+    return payload;
+  }catch{return null;}
+}
+
+function donationCode(){
+  const now=new Date();
+  const stamp=[String(now.getUTCFullYear()).slice(-2),String(now.getUTCMonth()+1).padStart(2,'0'),String(now.getUTCDate()).padStart(2,'0')].join('');
+  return `KIA-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function asBoolean(value){
+  return value===true||value===1||['1','true','yes','ya','y'].includes(String(value||'').trim().toLowerCase());
+}
+
 function stableSessionId(userId,device){
   const digest=crypto
     .createHmac('sha256',GATEWAY_SECRET||'kia-session')
@@ -64,7 +99,7 @@ function stableSessionId(userId,device){
 
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
-  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
@@ -186,7 +221,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.4.3'
+    version:'0.5.0'
   }
 }));
 
@@ -503,10 +538,10 @@ function sendError(res,e){
   const statusMap={
     UNAUTHORIZED:401,ADMIN_REQUIRED:403,SUPER_ADMIN_REQUIRED:403,FORBIDDEN:403,
     USER_NOT_FOUND:404,PROGRAM_NOT_FOUND:404,PROFILE_NOT_FOUND:404,ORGANIZATION_NOT_FOUND:404,
-    PROGRAM_MEDIA_NOT_FOUND:404,REVISION_NOT_FOUND:404,
-    INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INVALID_MEDIA_TYPE:400,
+    PROGRAM_MEDIA_NOT_FOUND:404,PROGRAM_UPDATE_NOT_FOUND:404,DONATION_NOT_FOUND:404,PAYMENT_NOT_FOUND:404,REVISION_NOT_FOUND:404,
+    INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INCOMPLETE_PROGRAM_UPDATE:400,INVALID_MEDIA_TYPE:400,INVALID_DONATION_AMOUNT:400,INVALID_PAYMENT_METHOD:400,INVALID_CHECKOUT_TOKEN:401,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
-    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,
+    SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,
     GATEWAY_TIMEOUT:504,WRITE_BUSY:503
   };
   const friendly={
@@ -515,7 +550,11 @@ function sendError(res,e){
     SUPER_ADMIN_REQUIRED:'Hanya SUPER_ADMIN yang dapat melakukan tindakan ini.',
     PROGRAM_NOT_FOUND:'Program tidak ditemukan.',VERIFICATION_REQUIRED:'Verifikasi penggalang dana harus disetujui terlebih dahulu.',
     INVALID_PROGRAM_STATUS:'Status program tidak mendukung tindakan ini.',MEDIA_TOO_LARGE:'Ukuran gambar terlalu besar setelah diproses.',
-    REVISION_NOT_PENDING:'Revisi ini sudah diproses.'
+    REVISION_NOT_PENDING:'Revisi ini sudah diproses.',
+    INVALID_DONATION_AMOUNT:'Nominal donasi minimal Rp1.000.',
+    INVALID_PAYMENT_METHOD:'Metode pembayaran belum didukung.',
+    INVALID_CHECKOUT_TOKEN:'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.',
+    INCOMPLETE_PROGRAM_UPDATE:'Judul dan isi perkembangan wajib diisi.'
   };
   const status=Number(e.status)||statusMap[code]||500;
   res.status(status).json({success:false,code,message:friendly[code]||e.message||'Terjadi kesalahan server.'});
@@ -741,6 +780,46 @@ app.post('/api/programs/:id/status',async(req,res)=>{
   }catch(e){sendError(res,e)}
 });
 
+
+app.get('/api/programs/:id/updates',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('programUpdatesFast',{token_hash,program_id:req.params.id},{timeout:12000});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/programs/:id/updates',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const title=text(req.body.title,180),content=text(req.body.content,5000);
+    if(!title||!content) throw httpError(400,'Judul dan isi perkembangan wajib diisi.','INCOMPLETE_PROGRAM_UPDATE');
+    const data=await gas('saveProgramUpdateFast',{
+      token_hash,
+      program_id:req.params.id,
+      title,
+      content,
+      program_media_id:text(req.body.program_media_id,160)
+    },{timeout:15000,attempts:1});
+    res.status(201).json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/programs/:id/updates/:updateId/archive',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('archiveProgramUpdateFast',{
+      token_hash,
+      program_id:req.params.id,
+      update_id:req.params.updateId
+    },{timeout:12000,attempts:1});
+    res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
 app.get('/api/public/bootstrap',async(req,res)=>{
   try{
     const data=await gas('publicBootstrapFast',{}, {timeout:12000});
@@ -762,6 +841,102 @@ app.get('/api/public/programs/:id',async(req,res)=>{
   try{
     const data=await gas('publicProgramFast',{program_id:req.params.id},{timeout:12000});
     res.json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
+
+app.post('/api/donations/checkout',async(req,res)=>{
+  try{
+    const program_id=text(req.body.program_id,180);
+    const gross_amount=Math.floor(Number(req.body.gross_amount)||0);
+    const payment_method=text(req.body.payment_method,40).toUpperCase();
+    const donor_name=text(req.body.donor_name,140);
+    const donor_email=normEmail(req.body.donor_email);
+    const donor_phone=text(req.body.donor_phone,60);
+    const is_anonymous=asBoolean(req.body.is_anonymous);
+    const message=text(req.body.message,600);
+
+    if(gross_amount<1000) throw httpError(400,'Nominal donasi minimal Rp1.000.','INVALID_DONATION_AMOUNT');
+    if(!['QRIS','VIRTUAL_ACCOUNT'].includes(payment_method)) throw httpError(400,'Metode pembayaran belum didukung.','INVALID_PAYMENT_METHOD');
+    if(!program_id||!donor_name) throw httpError(400,'Nama donatur dan program wajib diisi.','INCOMPLETE_DONATION');
+
+    const authUser=await sessionUser(req).catch(()=>null);
+    const now=new Date().toISOString();
+    const donation_id=id('don');
+    const payment_id=id('pay');
+    const donation_row={
+      donation_id,
+      donation_code:donationCode(),
+      program_id,
+      user_id:authUser?.user_id||'',
+      donor_name,
+      donor_email,
+      donor_phone,
+      is_anonymous:is_anonymous?'TRUE':'FALSE',
+      message,
+      gross_amount,
+      status:'PENDING',
+      created_at:now,
+      updated_at:now
+    };
+    const payment_row={
+      payment_id,
+      donation_id,
+      attempt_no:1,
+      provider:'DOKU',
+      payment_method,
+      payment_channel:payment_method==='QRIS'?'QRIS':'VA_AUTO',
+      requested_amount:gross_amount,
+      fee_amount:0,
+      paid_amount:0,
+      provider_reference:'',
+      provider_invoice_number:'',
+      payment_url:'',
+      va_number:'',
+      qr_data:'',
+      status:'CREATED',
+      expired_at:'',
+      paid_at:'',
+      created_at:now,
+      updated_at:now
+    };
+
+    const data=await gas('createDonationPaymentShellFast',{donation_row,payment_row},{timeout:18000,attempts:1});
+    const view_token=signCheckoutViewToken({donation_id,payment_id,exp:Date.now()+7*864e5});
+
+    res.status(201).json({
+      success:true,
+      data:{
+        donation:{
+          donation_id,
+          donation_code:donation_row.donation_code,
+          program_id,
+          gross_amount,
+          status:'PENDING'
+        },
+        payment:{
+          payment_id,
+          payment_method,
+          payment_channel:payment_row.payment_channel,
+          status:'CREATED'
+        },
+        program:data.program,
+        provider_ready:false,
+        view_token
+      }
+    });
+  }catch(e){sendError(res,e)}
+});
+
+app.get('/api/payments/status',async(req,res)=>{
+  try{
+    const token=verifyCheckoutViewToken(req.query.token);
+    if(!token) throw httpError(401,'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.','INVALID_CHECKOUT_TOKEN');
+    const data=await gas('publicPaymentStatusFast',{
+      donation_id:token.donation_id,
+      payment_id:token.payment_id
+    },{timeout:12000});
+    res.json({success:true,data:{...data,provider_ready:false}});
   }catch(e){sendError(res,e)}
 });
 
@@ -878,7 +1053,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.4.3'
+          version:'0.5.0'
         }
       }
     });
