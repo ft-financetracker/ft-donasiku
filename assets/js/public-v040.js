@@ -3,8 +3,8 @@
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]));
-  const CACHE_KEY='kia_public_bootstrap_v054';
-  const LEGACY_CACHE_KEYS=['kia_public_bootstrap_v052','kia_public_bootstrap_v051'];
+  const CACHE_KEY='kia_public_bootstrap_v055';
+  const LEGACY_CACHE_KEYS=['kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051'];
   let lastAppliedInvalidation=Number(localStorage.getItem('kia_public_invalidate_at')||0);
   const CACHE_MAX_AGE=6*60*60*1000;
 
@@ -48,7 +48,24 @@
     root.innerHTML=items.map(p=>{const media=p.media||[],cover=(media.find(x=>x.is_cover)||media[0])?.public_url||p.cover_image_url||'',pct=Math.min(100,Math.round((Number(p.raised_amount)||0)/(Number(p.target_amount)||1)*100));return `<article class="card public-program"><div class="program-poster" style="background-image:url('${esc(cover)}')" data-poster></div>${media.length>1?`<div class="program-thumbs">${thumbs(p)}</div>`:''}<div class="program-body"><span class="program-category">${esc(p.category)}</span><h3>${esc(p.program_name)}</h3><div class="progress"><span style="width:${pct}%"></span></div><div class="program-meta"><span>${idr(p.raised_amount)} terkumpul</span><span>${pct}%</span></div><a class="btn btn-primary" style="width:100%" href="./program.html?id=${encodeURIComponent(p.program_id)}">Lihat Program</a></div></article>`}).join('');
     $$('[data-thumb]',root).forEach(t=>t.onclick=()=>{const card=t.closest('.public-program');card.querySelector('[data-poster]').style.backgroundImage=`url('${t.dataset.thumb}')`});
   }
-  function renderLiveDonations(items){const root=$('[data-live-donations]');if(!root)return;const rows=Array.isArray(items)?items:[];if(!rows.length){root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Belum ada donasi tervalidasi. Live Donation akan terisi otomatis setelah pembayaran berstatus PAID.</div>';return}root.innerHTML=rows.map(x=>`<article class="card live-donation-card"><div class="live-donation-icon"><span class="material-symbols-outlined">volunteer_activism</span></div><div><strong>${esc(x.donor_label||'Hamba Allah')}</strong><p>${idr(x.amount)} · ${esc(x.program_name||'Program KIA')}</p></div></article>`).join('')}
+  function initials(name){const s=String(name||'Hamba Allah').trim();if(!s)return'HA';const p=s.split(/\s+/).filter(Boolean);return(p[0]?.[0]||'H')+(p[1]?.[0]||'');}
+  function badgeClass(code){return String(code||'GENERAL').toLowerCase()}
+  function renderLiveDonations(items){
+    const root=$('[data-live-donations]');if(!root)return;
+    const rows=Array.isArray(items)?items:[];
+    if(!rows.length){root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Belum ada donasi tervalidasi. Live Donation akan terisi otomatis setelah pembayaran berstatus PAID.</div>';return}
+    root.innerHTML=rows.map(x=>{
+      const donor=x.donor_label||'Hamba Allah',message=String(x.message||'').trim();
+      return `<article class="card live-donation-card-v055">
+        <div class="donor-avatar-frame donor-avatar-frame--default" aria-hidden="true"><span>${esc(initials(donor).toUpperCase())}</span></div>
+        <div class="live-donation-copy-v055">
+          <div class="live-donation-title-v055"><strong>${idr(x.amount)}</strong><span>·</span><span class="live-program-name-v055">${esc(x.program_name||'Program KIA')}</span></div>
+          <div class="live-donation-person-v055"><span>${esc(donor)}</span><span class="donor-badge donor-badge--${badgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Umum')}</span></div>
+          <p class="live-donation-message-v055">${message?`“${esc(message)}”`:'<span class="muted">Tanpa pesan</span>'}</p>
+        </div>
+      </article>`;
+    }).join('')
+  }
   function renderFaq(items){const root=$('[data-faq-preview]');if(root)root.innerHTML=(items||[]).slice(0,4).map(x=>`<details><summary>${esc(x.question)}</summary><p>${esc(x.answer)}</p></details>`).join('')}
   function applyData(data){
     if(!data)return;heroes=normalizedHeroes(data.heroes||[]);heroIndex=Math.min(heroIndex,heroes.length-1);renderHero();restartHeroTimer();
@@ -59,7 +76,7 @@
   }
   function publicError(){const root=$('[data-public-programs]');if(root)root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Program belum dapat dimuat. <button class="btn btn-ghost" type="button" data-public-retry>Coba Lagi</button></div>';if($('[data-live-donations]'))$('[data-live-donations]').innerHTML='<div class="empty-state" style="grid-column:1/-1">Live Donation belum dapat dimuat.</div>';$('[data-public-retry]')?.addEventListener('click',load)}
   async function prefetchCatalog(seed){
-    const key='kia_catalog_v054_1_ALL_';
+    const key='kia_catalog_v055_1_ALL_';
     try{
       if(seed?.programs?.length){
         const total=Number(seed.stats?.active_programs)||seed.programs.length;

@@ -1,5 +1,26 @@
 [
   {
+    "version": "0.5.5",
+    "date": "2026-09-16",
+    "title": "Live Donation & Donor Feed",
+    "new": [
+      "Halaman Semua Donasi per program dengan pagination 10 transaksi per halaman",
+      "Label publik donatur: Umum, Terverifikasi, atau Anonim tanpa mengekspos data kontak",
+      "Struktur avatar/frame default disiapkan sebagai fondasi profil dan badge versi berikutnya"
+    ],
+    "improvements": [
+      "Live Donation menempatkan nominal sebagai informasi utama, diikuti nama program, donatur, dan pesan/doa maksimal tiga baris",
+      "Ringkasan program hanya menampilkan lima donasi terbaru, dilengkapi nomor urut, pesan, nominal, dan tombol Lihat Semua Donasi",
+      "Detail program tidak lagi memuat seluruh program aktif hanya untuk menyusun daftar donasi terbaru",
+      "Daftar donasi memakai materialized Live Donation dan pagination agar tetap ringan saat jumlah transaksi membesar"
+    ],
+    "fixes": [
+      "Memperbaiki tampilan Live Donation yang sebelumnya terlalu datar dan sulit dipindai",
+      "Mencegah halaman detail program tumbuh tanpa batas ketika jumlah donatur semakin besar",
+      "Menjaga status anonim tetap Hamba Allah pada seluruh feed publik"
+    ]
+  },
+  {
     "version": "0.5.4",
     "date": "2026-09-16",
     "title": "Performance, Checkout & Auth Stability",

@@ -2,11 +2,11 @@
   const $=s=>document.querySelector(s);
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':'&quot;'}[c]));
   const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
-  const VERSION='v054';
+  const VERSION='v055';
   let page=1,totalPages=1,timer,requestSeq=0;
 
   const key=(p,q,c)=>`kia_catalog_${VERSION}_${p}_${c}_${q.toLowerCase().slice(0,80)}`;
-  const legacyKeys=(p,q,c)=>[`kia_catalog_v052_${p}_${c}_${q.toLowerCase().slice(0,80)}`,`kia_catalog_v051_${p}_${c}_${q.toLowerCase().slice(0,80)}`];
+  const legacyKeys=(p,q,c)=>[`kia_catalog_v054_${p}_${c}_${q.toLowerCase().slice(0,80)}`,`kia_catalog_v052_${p}_${c}_${q.toLowerCase().slice(0,80)}`,`kia_catalog_v051_${p}_${c}_${q.toLowerCase().slice(0,80)}`];
 
   function parseCache(k,maxAge=6*3600000){
     try{const x=JSON.parse(localStorage.getItem(k)||'null');return x&&Date.now()-Number(x.t||0)<maxAge?x.d:null}catch{return null}
@@ -16,7 +16,7 @@
 
   function bootstrapSeed(){
     try{
-      for(const k of ['kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051']){
+      for(const k of ['kia_public_bootstrap_v055','kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051']){
         const x=JSON.parse(localStorage.getItem(k)||'null');
         if(!x||Date.now()-Number(x.saved_at||0)>6*3600000||!x.data?.programs?.length)continue;
         const total=Number(x.data.stats?.active_programs)||x.data.programs.length;

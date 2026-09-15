@@ -1,11 +1,11 @@
-const APP_VERSION='0.5.4';
-const APP_BUILD=54;
-const CACHE='kia-v0.5.4';
+const APP_VERSION='0.5.5';
+const APP_BUILD=55;
+const CACHE='kia-v0.5.5';
 const SHELL=[
-  './','./index.html','./login.html','./register.html','./app.html','./program.html','./programs.html','./donate.html','./payment.html','./help.html','./info.html','./offline.html',
+  './','./index.html','./login.html','./register.html','./app.html','./program.html','./program-donations.html','./programs.html','./donate.html','./payment.html','./help.html','./info.html','./offline.html',
   './manifest-v040.json','./manifest.json','./app-version.json','./changelog.json',
-  './assets/css/tokens.css','./assets/css/components.css','./assets/css/auth.css','./assets/css/ui.css','./assets/css/public-v040.css','./assets/css/dashboard-v040.css','./assets/css/program-v040.css','./assets/css/checkout-v050.css',
-  './assets/js/config.js','./assets/js/auth.js','./assets/js/public-auth.js','./assets/js/auth-page.js','./assets/js/ui.js','./assets/js/login.js','./assets/js/register.js','./assets/js/dashboard-v040.js','./assets/js/donor-impact-v051.js','./assets/js/public-v040.js','./assets/js/catalog-v040.js','./assets/js/program-v040.js','./assets/js/donate-v050.js','./assets/js/payment-v050.js','./assets/js/help-v040.js','./assets/js/info-v040.js','./assets/js/pwa-v040.js',
+  './assets/css/tokens.css','./assets/css/components.css','./assets/css/auth.css','./assets/css/ui.css','./assets/css/public-v040.css','./assets/css/dashboard-v040.css','./assets/css/program-v040.css','./assets/css/checkout-v050.css','./assets/css/donation-feed-v055.css',
+  './assets/js/config.js','./assets/js/auth.js','./assets/js/public-auth.js','./assets/js/auth-page.js','./assets/js/ui.js','./assets/js/login.js','./assets/js/register.js','./assets/js/dashboard-v040.js','./assets/js/donor-impact-v051.js','./assets/js/public-v040.js','./assets/js/catalog-v040.js','./assets/js/program-v040.js','./assets/js/program-donations-v055.js','./assets/js/donate-v050.js','./assets/js/payment-v050.js','./assets/js/help-v040.js','./assets/js/info-v040.js','./assets/js/pwa-v040.js',
   './icons/kia-symbol-v030.png','./icons/favicon-white-v040-32.png','./icons/favicon-white-v040-48.png','./icons/favicon-white-v040.ico','./icons/kia-apple-v040-180.png','./icons/kia-app-v040-192.png','./icons/kia-app-v040-512.png','./icons/kia-app-v040-maskable-512.png',
   './assets/images/hero/hero-1.png','./assets/images/hero/hero-2.png','./assets/images/hero/hero-3.png'
 ];

@@ -26,11 +26,19 @@
     return `<div class="timeline">${items.map(x=>`<article class="timeline-item"><div class="timeline-line"><span class="timeline-dot"></span></div><div class="timeline-content"><div class="timeline-date">${esc(date(x.published_at))}</div><h3>${esc(x.title)}</h3><p>${esc(x.content)}</p>${x.image_url?`<img src="${esc(x.image_url)}" alt="Dokumentasi perkembangan">`:''}</div></article>`).join('')}</div>`;
   }
 
+  function donorInitials(name){const p=String(name||'Hamba Allah').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'H')+(p[1]?.[0]||'')).toUpperCase()}
+  function donorBadgeClass(code){return String(code||'GENERAL').toLowerCase()}
   function recentDonationsHtml(){
     if(detail?._summary_only)return '<div class="empty-room">Memuat donasi tervalidasi terbaru…</div>';
-    const items=detail?.recent_donations||[];
+    const items=(detail?.recent_donations||[]).slice(0,5);
     if(!items.length)return '<div class="empty-room">Live Donation akan muncul otomatis setelah pembayaran berhasil tervalidasi.</div>';
-    return `<div class="recent-donations">${items.map(x=>`<div class="recent-donation"><strong>${esc(x.donor_label||'Hamba Allah')}</strong><span>${idr(x.amount)}</span></div>`).join('')}</div>`;
+    const rows=items.map((x,i)=>{const donor=x.donor_label||'Hamba Allah',message=String(x.message||'').trim();return `<article class="program-donation-row-v055">
+      <div class="program-donation-no-v055">#${i+1}</div>
+      <div class="donor-avatar-frame donor-avatar-frame--compact" aria-hidden="true"><span>${esc(donorInitials(donor))}</span></div>
+      <div class="program-donation-person-v055"><div><strong>${esc(donor)}</strong><span class="donor-badge donor-badge--${donorBadgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Umum')}</span></div><p>${message?`“${esc(message)}”`:'<span class="muted">Tanpa pesan</span>'}</p></div>
+      <strong class="program-donation-amount-v055">${idr(x.amount)}</strong>
+    </article>`}).join('');
+    return `<div class="program-donation-feed-v055">${rows}</div><div class="program-donation-feed-footer-v055"><a class="btn btn-soft" href="./program-donations.html?id=${encodeURIComponent(program.program_id)}">Lihat Semua Donasi →</a></div>`;
   }
 
   function transparencyHtml(){
@@ -146,17 +154,17 @@
     }catch(_){ }
   }
 
-  function detailCacheKey(id){return 'kia_program_detail_v054_'+id}
-  function legacyDetailCacheKeys(id){return ['kia_program_detail_v051_'+id]}
+  function detailCacheKey(id){return 'kia_program_detail_v055_'+id}
+  function legacyDetailCacheKeys(id){return ['kia_program_detail_v054_'+id,'kia_program_detail_v052_'+id,'kia_program_detail_v051_'+id]}
   function readDetailCache(id){try{for(const k of [detailCacheKey(id),...legacyDetailCacheKeys(id)]){const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&Date.now()-x.saved_at<6*3600000)return x.data}return null}catch{return null}}
   function writeDetailCache(id,data){try{localStorage.setItem(detailCacheKey(id),JSON.stringify({saved_at:Date.now(),data}))}catch{}}
   function summaryFallback(id){
     try{
-      const bootstrap=(JSON.parse(localStorage.getItem('kia_public_bootstrap_v054')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v052')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null'))?.data;
+      const bootstrap=(JSON.parse(localStorage.getItem('kia_public_bootstrap_v055')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v054')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v052')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null'))?.data;
       const fromBootstrap=(bootstrap?.programs||[]).find(x=>String(x.program_id)===String(id));
       if(fromBootstrap)return {program:fromBootstrap,transparency:{paid_donations:fromBootstrap.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
       for(let i=0;i<localStorage.length;i++){
-        const key=localStorage.key(i)||'';if(!/^kia_catalog_v0(?:54|52|51)_/.test(key))continue;
+        const key=localStorage.key(i)||'';if(!/^kia_catalog_v0(?:55|54|52|51)_/.test(key))continue;
         const data=JSON.parse(localStorage.getItem(key)||'null')?.d;
         const found=(data?.items||[]).find(x=>String(x.program_id)===String(id));
         if(found)return {program:found,transparency:{paid_donations:found.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};

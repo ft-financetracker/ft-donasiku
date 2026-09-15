@@ -1,8 +1,8 @@
 {
-  "version": "0.5.4",
-  "build": 54,
+  "version": "0.5.5",
+  "build": 55,
   "released_at": "2026-09-16",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Performance, checkout stability, payment return cache refresh, and resilient authentication gateway handling"
+  "summary": "Live Donation hierarchy, paginated program donor feed, donor verification labels, and public-feed performance polish"
 }
