@@ -10,21 +10,21 @@
       subtitle:'Setiap kebaikan dapat menjadi harapan baru.',
       cta_label:'Mulai Berdonasi',
       cta_url:'#program',
-      image_url:'./assets/images/hero/hero-1.jpg'
+      image_url:'./assets/images/hero/hero-1.png'
     },
     {
       title:'Bersama Membuka Jalan Pendidikan',
       subtitle:'Dukung langkah belajar dan masa depan yang lebih baik.',
       cta_label:'Lihat Program',
       cta_url:'#program',
-      image_url:'./assets/images/hero/hero-2.jpg'
+      image_url:'./assets/images/hero/hero-2.png'
     },
     {
       title:'Kebaikan yang Menguatkan Umat',
       subtitle:'Bersama membantu program sosial, masjid, dan kebutuhan masyarakat.',
       cta_label:'Lihat Program',
       cta_url:'#program',
-      image_url:'./assets/images/hero/hero-3.jpg'
+      image_url:'./assets/images/hero/hero-3.png'
     }
   ];
 
@@ -32,8 +32,28 @@
   let heroIndex=0;
   let heroTimer=null;
 
+  function normalizeHeroAsset(hero,index){
+    const item={...(hero||{})};
+    const slot=Number(item.sort_order)||index+1;
+    const image=String(item.image_url||'').trim();
+    const legacy=image.match(/assets\/images\/hero\/hero-([123])\.(?:jpg|jpeg)(?:[?#].*)?$/i);
+
+    // Upgrade otomatis path hero lokal lama (.jpg) ke aset HD 2:1 (.png).
+    // Custom image dari Media Library/Drive tidak disentuh.
+    if(legacy){
+      item.image_url=`./assets/images/hero/hero-${legacy[1]}.png`;
+    }else if(!image){
+      item.image_url=DEFAULT_HEROES[Math.max(0,Math.min(2,slot-1))].image_url;
+    }
+
+    item.sort_order=slot;
+    return item;
+  }
+
   function normalizedHeroes(remote){
-    const active=Array.isArray(remote)?remote.filter(Boolean).slice(0,3):[];
+    const active=Array.isArray(remote)
+      ? remote.filter(Boolean).slice(0,3).map(normalizeHeroAsset)
+      : [];
     const usedSlots=new Set(active.map(x=>Number(x.sort_order)||0).filter(Boolean));
     const result=[...active];
 

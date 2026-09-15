@@ -1,1 +1,36 @@
-:root{--primary:#176b52;--primary2:#0f513d;--accent:#d8b86a;--bg:#f7f8f5;--surface:#fff;--text:#17211d;--muted:#6b756f;--border:#e2e7e3;--radius:18px;--shadow:0 16px 40px rgba(20,45,35,.08);font-family:Inter,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}a{text-decoration:none;color:inherit}
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Plus+Jakarta+Sans:wght@500..800&display=swap');
+
+:root{
+  --primary:#176b52;
+  --primary2:#0f513d;
+  --accent:#d8b86a;
+  --bg:#f7f8f5;
+  --surface:#fff;
+  --text:#17211d;
+  --muted:#6b756f;
+  --border:#e2e7e3;
+  --radius:18px;
+  --shadow:0 16px 40px rgba(20,45,35,.08);
+  --font-ui:'Manrope',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-display:'Plus Jakarta Sans','Manrope',Inter,system-ui,sans-serif;
+  --font-number:'Manrope',Inter,system-ui,sans-serif;
+  font-family:var(--font-ui);
+}
+
+*{box-sizing:border-box}
+html{font-family:var(--font-ui);font-synthesis:none;text-rendering:optimizeLegibility}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;line-height:1.55;letter-spacing:-.008em}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font-family:var(--font-ui)}
+h1,h2,h3,h4,h5,h6,.brand{font-family:var(--font-display);letter-spacing:-.032em;text-wrap:balance}
+p,.muted,small,label{letter-spacing:-.01em}
+
+/* Angka dibuat rapi dan premium, bukan dekoratif berlebihan. */
+[data-stat-paid],[data-stat-programs],[data-stat-disbursed],
+.metric strong,.stat strong,.program-meta,.number-display,.money,.amount,
+input[type='number']{
+  font-family:var(--font-number);
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:'tnum' 1,'lnum' 1;
+  letter-spacing:-.025em;
+}

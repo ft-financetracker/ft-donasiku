@@ -1,61 +1,21 @@
-{
-  "releases": [
-    {
-      "version": "0.4.1",
-      "date": "13 September 2026",
-      "changes": {
-        "PERBAIKAN": [
-          "Login tidak lagi gagal hanya karena Apps Script membutuhkan lebih dari 9 detik untuk merespons",
-          "Timeout autentikasi memakai satu kesempatan yang lebih panjang agar cold start tidak memicu retry ganda",
-          "Tiga Hero landing dipulihkan; slot kosong otomatis memakai tiga gambar bawaan KIA",
-          "Carousel Hero kembali berpindah otomatis dan tetap dapat dinavigasi manual"
-        ]
-      }
-    },
-    {
-      "version": "0.4.0",
-      "date": "13 September 2026",
-      "changes": {
-        "BARU": [
-          "Album foto program dengan pilihan poster utama",
-          "Katalog Semua Program dengan pencarian, kategori, dan pagination",
-          "Pusat Bantuan & Kepercayaan untuk keamanan, pembayaran, akun, dan penggalangan dana",
-          "FAQ/Q&A CMS dan Kontak KIA di Pengaturan Admin",
-          "Info Aplikasi, changelog, cek update, dan Pasang Aplikasi KIA",
-          "Keamanan Akun: ubah password dan keluar dari semua perangkat"
-        ],
-        "PENINGKATAN": [
-          "Review Admin menggunakan satu gateway request dan menampilkan skeleton saat memuat",
-          "Program yang disetujui admin langsung ACTIVE + PUBLIC",
-          "Program aktif tetap dapat diperbarui; perubahan material masuk review ulang",
-          "Landing membatasi jumlah program dan menyediakan Lihat Semua Program",
-          "Fast Session dan cache dashboard dipertahankan"
-        ],
-        "PERBAIKAN": [
-          "Pesan server lambat tidak lagi muncul terlalu cepat",
-          "Warna tombol Batal, Keluar, Tolak, Ghost, dan Danger diperjelas",
-          "Bottom navigation mobile dibuat lebih tipis dan menempel ke bagian bawah layar",
-          "Input URL gambar manual dihilangkan dari alur program dan hero"
-        ],
-        "KEAMANAN": [
-          "Role admin tetap dipertahankan di cache session",
-          "Session dapat dicabut dari semua perangkat",
-          "Perubahan role tetap dibatasi untuk SUPER_ADMIN"
-        ]
-      }
-    },
-    {
-      "version": "0.3.7",
-      "date": "September 2026",
-      "changes": {
-        "PENINGKATAN": [
-          "Fast gateway untuk update program",
-          "Import gambar langsung"
-        ],
-        "PERBAIKAN": [
-          "Update row Spreadsheet menggunakan satu setValues"
-        ]
-      }
-    }
-  ]
-}
+[
+  {
+    "version": "0.4.2",
+    "date": "2026-09-13",
+    "title": "Fast Auth, Hero HD & Typography",
+    "new": [],
+    "improvements": [
+      "Login memakai lookup Spreadsheet yang lebih ringan dan cache auth server",
+      "Finalisasi session dan last login digabung dalam satu gateway action",
+      "Hero default kembali menggunakan tiga gambar HD rasio 2:1",
+      "Hero mobile dibuat lebih ringkas agar tidak memakan layar",
+      "Typography KIA memakai hierarchy display/UI yang lebih rapi",
+      "Angka dan nominal memakai tabular lining numerals agar sejajar dan bersih"
+    ],
+    "fixes": [
+      "Memperbaiki GATEWAY_TIMEOUT akibat lookup/upsert Spreadsheet yang terlalu berat",
+      "Memperbaiki fallback Hero yang kembali menunjuk gambar JPG lama",
+      "Legacy URL hero lokal JPG otomatis diarahkan ke aset PNG HD"
+    ]
+  }
+]
