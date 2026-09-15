@@ -2,13 +2,27 @@ import express from 'express';
 import crypto from 'node:crypto';
 
 const app=express();
-app.use(express.json({limit:'6mb'}));
-app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, private');next();});
+app.use(express.json({limit:'6mb',verify:(req,res,buf)=>{req.rawBody=buf.toString('utf8')}}));
+app.use('/api',(req,res,next)=>{
+  if(String(req.path||'').startsWith('/public/')){
+    res.setHeader('Cache-Control','public, max-age=15, stale-while-revalidate=180');
+  }else{
+    res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, private');
+  }
+  next();
+});
 
 const PORT=process.env.PORT||3000;
 const GAS_URL=process.env.KIA_GAS_URL;
 const GATEWAY_SECRET=process.env.KIA_GATEWAY_SECRET;
 const ALLOWED_ORIGIN=process.env.KIA_ALLOWED_ORIGIN||'*';
+const PUBLIC_APP_URL=String(process.env.KIA_PUBLIC_APP_URL||((ALLOWED_ORIGIN&&ALLOWED_ORIGIN!=='*')?ALLOWED_ORIGIN:'https://ft-financetracker.github.io/ft-donasiku')).replace(/\/$/,'');
+const DOKU_ENV=String(process.env.KIA_DOKU_ENV||'sandbox').toLowerCase();
+const DOKU_CLIENT_ID=String(process.env.KIA_DOKU_CLIENT_ID||'').trim();
+const DOKU_SECRET_KEY=String(process.env.KIA_DOKU_SECRET_KEY||'').trim();
+const DOKU_NOTIFY_URL=String(process.env.KIA_DOKU_NOTIFY_URL||'').trim();
+const DOKU_API_BASE=DOKU_ENV==='production'?'https://api.doku.com':'https://api-sandbox.doku.com';
+const DOKU_CHECKOUT_TARGET='/checkout/v1/payment';
 
 app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-Origin',ALLOWED_ORIGIN);
@@ -83,6 +97,119 @@ function donationCode(){
   return `KIA-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
+
+function dokuConfigured(){return !!(DOKU_CLIENT_ID&&DOKU_SECRET_KEY)}
+function sha256Base64(value){return crypto.createHash('sha256').update(String(value),'utf8').digest('base64')}
+function sha256Hex(value){return crypto.createHash('sha256').update(String(value),'utf8').digest('hex')}
+function hmacDokuSignature({clientId,requestId,timestamp,target,digest,secret}){
+  const parts=[`Client-Id:${clientId}`,`Request-Id:${requestId}`,`Request-Timestamp:${timestamp}`,`Request-Target:${target}`];
+  if(digest) parts.push(`Digest:${digest}`);
+  return 'HMACSHA256='+crypto.createHmac('sha256',secret).update(parts.join('\n')).digest('base64');
+}
+function safeEqualString(a,b){
+  const aa=Buffer.from(String(a||''));const bb=Buffer.from(String(b||''));
+  return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb);
+}
+function dokuPaymentTypes(method){
+  if(method==='QRIS') return ['QRIS'];
+  if(method==='VIRTUAL_ACCOUNT') return [
+    'VIRTUAL_ACCOUNT_BCA','VIRTUAL_ACCOUNT_BANK_MANDIRI','VIRTUAL_ACCOUNT_BANK_SYARIAH_MANDIRI',
+    'VIRTUAL_ACCOUNT_BRI','VIRTUAL_ACCOUNT_BNI','VIRTUAL_ACCOUNT_BANK_PERMATA'
+  ];
+  return [];
+}
+function dokuExpiredIso(value){
+  const raw=String(value||'').replace(/\D/g,'');
+  if(raw.length!==14) return '';
+  const y=raw.slice(0,4),m=raw.slice(4,6),d=raw.slice(6,8),h=raw.slice(8,10),mi=raw.slice(10,12),sec=raw.slice(12,14);
+  const date=new Date(`${y}-${m}-${d}T${h}:${mi}:${sec}+07:00`);
+  return isNaN(date.getTime())?'':date.toISOString();
+}
+async function dokuCreateCheckout({invoice,amount,paymentMethod,donor,callbackUrl}){
+  if(!dokuConfigured()) return {ready:false,reason:'DOKU_NOT_CONFIGURED'};
+  const requestId=crypto.randomUUID();
+  const timestamp=new Date().toISOString().replace(/\.\d{3}Z$/,'Z');
+  const body={
+    order:{
+      amount,
+      invoice_number:invoice,
+      currency:'IDR',
+      callback_url:callbackUrl,
+      callback_url_result:callbackUrl,
+      language:'ID',
+      auto_redirect:false
+    },
+    payment:{payment_due_date:60,payment_method_types:dokuPaymentTypes(paymentMethod)}
+  };
+  const customer={};
+  if(donor?.id) customer.id=String(donor.id).replace(/[^A-Za-z0-9_-]/g,'').slice(0,50);
+  if(donor?.name) customer.name=String(donor.name).slice(0,100);
+  if(donor?.email) customer.email=String(donor.email).slice(0,120);
+  if(donor?.phone) customer.phone=String(donor.phone).replace(/[^0-9+]/g,'').slice(0,30);
+  if(Object.keys(customer).length) body.customer=customer;
+  if(DOKU_NOTIFY_URL) body.additional_info={override_notification_url:DOKU_NOTIFY_URL};
+  const raw=JSON.stringify(body);
+  const signature=hmacDokuSignature({
+    clientId:DOKU_CLIENT_ID,requestId,timestamp,target:DOKU_CHECKOUT_TARGET,
+    digest:sha256Base64(raw),secret:DOKU_SECRET_KEY
+  });
+  const response=await fetch(DOKU_API_BASE+DOKU_CHECKOUT_TARGET,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Client-Id':DOKU_CLIENT_ID,'Request-Id':requestId,'Request-Timestamp':timestamp,'Signature':signature},
+    body:raw,
+    signal:AbortSignal.timeout(15000)
+  });
+  let out={};
+  try{out=await response.json()}catch{out={}}
+  if(!response.ok||!out?.response?.payment?.url){
+    const err=new Error((out?.error_messages||out?.message||['DOKU_CREATE_FAILED']).join?.('; ')||'DOKU_CREATE_FAILED');
+    err.code='DOKU_CREATE_FAILED';
+    throw err;
+  }
+  return {
+    ready:true,
+    requestId,
+    paymentUrl:String(out.response.payment.url||''),
+    expiredAt:dokuExpiredIso(out.response.payment.expired_date),
+    raw:out
+  };
+}
+function verifyDokuNotification(req){
+  if(!dokuConfigured()) throw httpError(503,'DOKU belum dikonfigurasi.','DOKU_NOT_CONFIGURED');
+  const clientId=String(req.headers['client-id']||'');
+  const requestId=String(req.headers['request-id']||'');
+  const timestamp=String(req.headers['request-timestamp']||'');
+  const signature=String(req.headers['signature']||'');
+  if(!clientId||!requestId||!timestamp||!signature) throw httpError(401,'Header notifikasi DOKU tidak lengkap.','DOKU_INVALID_HEADERS');
+  if(clientId!==DOKU_CLIENT_ID) throw httpError(401,'Client DOKU tidak valid.','DOKU_INVALID_CLIENT');
+  const raw=String(req.rawBody||JSON.stringify(req.body||{}));
+  const expected=hmacDokuSignature({clientId,requestId,timestamp,target:req.path,digest:sha256Base64(raw),secret:DOKU_SECRET_KEY});
+  if(!safeEqualString(signature,expected)) throw httpError(401,'Signature DOKU tidak valid.','DOKU_INVALID_SIGNATURE');
+  return {requestId,raw,payloadHash:sha256Hex(raw)};
+}
+
+const publicResponseCache=new Map();
+function clearPublicResponseCache(){publicResponseCache.clear()}
+async function publicCached(key,loader,{freshMs=45000,staleMs=5*60*1000}={}){
+  const now=Date.now();const item=publicResponseCache.get(key);
+  if(item&&now-item.savedAt<freshMs) return item.data;
+  if(item&&now-item.savedAt<staleMs){
+    if(!item.refreshing){
+      item.refreshing=Promise.resolve().then(loader).then(data=>{publicResponseCache.set(key,{data,savedAt:Date.now(),refreshing:null});return data}).catch(()=>item.data).finally(()=>{const x=publicResponseCache.get(key);if(x)x.refreshing=null});
+    }
+    return item.data;
+  }
+  const data=await loader();publicResponseCache.set(key,{data,savedAt:Date.now(),refreshing:null});return data;
+}
+async function warmPublicCache(){
+  try{
+    const bootstrap=await gas('publicBootstrapFast',{}, {timeout:16000,attempts:1});
+    publicResponseCache.set('bootstrap',{data:bootstrap,savedAt:Date.now(),refreshing:null});
+    const programs=await gas('publicProgramsFast',{page:1,limit:12,search:'',category:'ALL'},{timeout:16000,attempts:1});
+    publicResponseCache.set('programs:1:12::ALL',{data:programs,savedAt:Date.now(),refreshing:null});
+  }catch(err){console.warn('PUBLIC_CACHE_WARM_FAILED',err.message)}
+}
+
 function asBoolean(value){
   return value===true||value===1||['1','true','yes','ya','y'].includes(String(value||'').trim().toLowerCase());
 }
@@ -97,9 +224,16 @@ function stableSessionId(userId,device){
   return `ses_${digest}`;
 }
 
+const PUBLIC_INVALIDATING_ACTIONS=new Set([
+  'createProgramFast','updateProgramFast','submitProgramFast','programStatusFast',
+  'saveProgramUpdateFast','archiveProgramUpdateFast','uploadProgramMedia','setProgramCover',
+  'archiveProgramMedia','reorderProgramMedia','reviewDecisionFast','saveHeroFast','archiveMedia',
+  'faqSaveFast','faqArchiveFast','siteSettingsSaveFast','commitDokuPaymentFast'
+]);
+
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw new Error('BACKEND_NOT_CONFIGURED');
-  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
@@ -114,6 +248,7 @@ async function gas(action,payload={},opts={}){
       const r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,signal:controller.signal});
       const out=await r.json();
       if(!out.success){const e=new Error(out.code||'GATEWAY_ERROR');e.code=out.code;throw e;}
+      if(PUBLIC_INVALIDATING_ACTIONS.has(action)) clearPublicResponseCache();
       return out.data;
     }catch(err){
       lastError=err;
@@ -221,7 +356,7 @@ app.get('/health',(req,res)=>res.json({
   success:true,
   data:{
     app:'KIA Backend',
-    version:'0.5.0'
+    version:'0.5.1'
   }
 }));
 
@@ -803,6 +938,7 @@ app.post('/api/programs/:id/updates',async(req,res)=>{
       content,
       program_media_id:text(req.body.program_media_id,160)
     },{timeout:15000,attempts:1});
+    clearPublicResponseCache();
     res.status(201).json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -816,30 +952,32 @@ app.post('/api/programs/:id/updates/:updateId/archive',async(req,res)=>{
       program_id:req.params.id,
       update_id:req.params.updateId
     },{timeout:12000,attempts:1});
+    clearPublicResponseCache();
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/public/bootstrap',async(req,res)=>{
   try{
-    const data=await gas('publicBootstrapFast',{}, {timeout:12000});
+    const data=await publicCached('bootstrap',()=>gas('publicBootstrapFast',{}, {timeout:16000,attempts:1}),{freshMs:45000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/public/programs',async(req,res)=>{
   try{
-    const data=await gas('publicProgramsFast',{
-      page:Number(req.query.page)||1,limit:Number(req.query.limit)||12,
-      search:text(req.query.search,120),category:text(req.query.category,80)||'ALL'
-    },{timeout:12000});
+    const page=Number(req.query.page)||1,limit=Number(req.query.limit)||12;
+    const search=text(req.query.search,120),category=text(req.query.category,80)||'ALL';
+    const key=`programs:${page}:${limit}:${search.toLowerCase()}:${category.toUpperCase()}`;
+    const data=await publicCached(key,()=>gas('publicProgramsFast',{page,limit,search,category},{timeout:16000,attempts:1}),{freshMs:60000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.get('/api/public/programs/:id',async(req,res)=>{
   try{
-    const data=await gas('publicProgramFast',{program_id:req.params.id},{timeout:12000});
+    const id=String(req.params.id||'');
+    const data=await publicCached(`program:${id}`,()=>gas('publicProgramFast',{program_id:id},{timeout:16000,attempts:1}),{freshMs:60000,staleMs:10*60*1000});
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
@@ -864,64 +1002,48 @@ app.post('/api/donations/checkout',async(req,res)=>{
     const now=new Date().toISOString();
     const donation_id=id('don');
     const payment_id=id('pay');
-    const donation_row={
-      donation_id,
-      donation_code:donationCode(),
-      program_id,
-      user_id:authUser?.user_id||'',
-      donor_name,
-      donor_email,
-      donor_phone,
-      is_anonymous:is_anonymous?'TRUE':'FALSE',
-      message,
-      gross_amount,
-      status:'PENDING',
-      created_at:now,
-      updated_at:now
-    };
-    const payment_row={
-      payment_id,
-      donation_id,
-      attempt_no:1,
-      provider:'DOKU',
-      payment_method,
-      payment_channel:payment_method==='QRIS'?'QRIS':'VA_AUTO',
-      requested_amount:gross_amount,
-      fee_amount:0,
-      paid_amount:0,
-      provider_reference:'',
-      provider_invoice_number:'',
-      payment_url:'',
-      va_number:'',
-      qr_data:'',
-      status:'CREATED',
-      expired_at:'',
-      paid_at:'',
-      created_at:now,
-      updated_at:now
-    };
+    const donation_code=donationCode();
+    const provider_invoice_number=donation_code.replace(/[^A-Za-z0-9]/g,'').slice(0,60);
+    const view_token=signCheckoutViewToken({donation_id,payment_id,exp:Date.now()+7*864e5});
+    const callbackUrl=`${PUBLIC_APP_URL}/payment.html?token=${encodeURIComponent(view_token)}`;
+
+    const donation_row={donation_id,donation_code,program_id,user_id:authUser?.user_id||'',donor_name,donor_email,donor_phone,is_anonymous:is_anonymous?'TRUE':'FALSE',message,gross_amount,status:'PENDING',created_at:now,updated_at:now};
+    const payment_row={payment_id,donation_id,attempt_no:1,provider:'DOKU',payment_method,payment_channel:payment_method==='QRIS'?'QRIS':'VA_CHECKOUT',requested_amount:gross_amount,fee_amount:0,paid_amount:0,provider_reference:'',provider_invoice_number,payment_url:'',va_number:'',qr_data:'',status:'CREATED',expired_at:'',paid_at:'',created_at:now,updated_at:now};
 
     const data=await gas('createDonationPaymentShellFast',{donation_row,payment_row},{timeout:18000,attempts:1});
-    const view_token=signCheckoutViewToken({donation_id,payment_id,exp:Date.now()+7*864e5});
+    let provider={ready:false,reason:dokuConfigured()?'DOKU_CREATE_PENDING':'DOKU_NOT_CONFIGURED'};
+
+    if(dokuConfigured()){
+      try{
+        const created=await dokuCreateCheckout({
+          invoice:provider_invoice_number,amount:gross_amount,paymentMethod:payment_method,
+          donor:{id:authUser?.user_id||donation_id,name:donor_name,email:donor_email,phone:donor_phone},callbackUrl
+        });
+        const patch={
+          provider_reference:created.requestId,
+          provider_invoice_number,
+          payment_url:created.paymentUrl,
+          status:'PENDING',
+          expired_at:created.expiredAt,
+          updated_at:new Date().toISOString(),
+          payment_channel:payment_method==='QRIS'?'QRIS':'DOKU_CHECKOUT_VA'
+        };
+        await gas('updatePaymentProviderFast',{payment_id,donation_id,patch},{timeout:12000,attempts:1});
+        provider={ready:true,payment_url:created.paymentUrl,expired_at:created.expiredAt,request_id:created.requestId};
+      }catch(err){
+        console.error('DOKU_CREATE_FAILED',err.message);
+        provider={ready:false,reason:'DOKU_CREATE_FAILED'};
+      }
+    }
 
     res.status(201).json({
       success:true,
       data:{
-        donation:{
-          donation_id,
-          donation_code:donation_row.donation_code,
-          program_id,
-          gross_amount,
-          status:'PENDING'
-        },
-        payment:{
-          payment_id,
-          payment_method,
-          payment_channel:payment_row.payment_channel,
-          status:'CREATED'
-        },
+        donation:{donation_id,donation_code,program_id,gross_amount,status:'PENDING'},
+        payment:{payment_id,payment_method,payment_channel:payment_row.payment_channel,status:provider.ready?'PENDING':'CREATED',payment_url:provider.payment_url||'',expired_at:provider.expired_at||''},
         program:data.program,
-        provider_ready:false,
+        provider_ready:provider.ready,
+        provider_reason:provider.reason||'',
         view_token
       }
     });
@@ -932,11 +1054,43 @@ app.get('/api/payments/status',async(req,res)=>{
   try{
     const token=verifyCheckoutViewToken(req.query.token);
     if(!token) throw httpError(401,'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.','INVALID_CHECKOUT_TOKEN');
-    const data=await gas('publicPaymentStatusFast',{
-      donation_id:token.donation_id,
-      payment_id:token.payment_id
-    },{timeout:12000});
-    res.json({success:true,data:{...data,provider_ready:false}});
+    const data=await gas('publicPaymentStatusFast',{donation_id:token.donation_id,payment_id:token.payment_id},{timeout:12000,attempts:1});
+    res.json({success:true,data:{...data,provider_ready:!!data?.payment?.payment_url,doku_configured:dokuConfigured()}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/payments/doku/notify',async(req,res)=>{
+  try{
+    const verified=verifyDokuNotification(req);
+    const body=req.body||{};
+    const invoice=text(body?.order?.invoice_number,100);
+    const status=text(body?.transaction?.status,40).toUpperCase();
+    const amount=Number(body?.order?.amount)||0;
+    if(!invoice||!status) throw httpError(400,'Payload notifikasi DOKU tidak lengkap.','DOKU_INVALID_PAYLOAD');
+    const providerReference=text(body?.transaction?.original_request_id||body?.transaction?.identifier||verified.requestId,180);
+    const paidAt=text(body?.transaction?.date,80)||new Date().toISOString();
+    const data=await gas('commitDokuPaymentFast',{event:{
+      event_id:verified.requestId,
+      provider_invoice_number:invoice,
+      provider_reference:providerReference,
+      status,
+      amount,
+      fee_amount:0,
+      paid_at:paidAt,
+      payload_hash:verified.payloadHash,
+      payload_json:verified.raw
+    }},{timeout:18000,attempts:1});
+    clearPublicResponseCache();
+    res.status(200).json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
+app.get('/api/donor/impact',async(req,res)=>{
+  try{
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) throw httpError(401,'Sesi tidak valid atau kedaluwarsa.','UNAUTHORIZED');
+    const data=await gas('donorImpactFast',{token_hash},{timeout:14000,attempts:1});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
@@ -1053,7 +1207,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.0'
+          version:'0.5.1'
         }
       }
     });
@@ -1129,4 +1283,5 @@ app.post('/api/security/logout-all',async(req,res)=>{
 app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);
   setTimeout(()=>warmAuthUserCache(),250);
+  setTimeout(()=>warmPublicCache(),700);
 });
