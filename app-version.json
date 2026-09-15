@@ -1,8 +1,8 @@
 {
-  "version": "0.4.2",
-  "build": 42,
-  "released_at": "2026-09-13",
+  "version": "0.4.3",
+  "build": 43,
+  "released_at": "2026-09-15",
   "required_update": false,
-  "minimum_supported_version": "0.3.7",
-  "summary": "Fast login Spreadsheet gateway, pemulihan Hero HD 2:1, dan typography KIA yang lebih premium"
+  "minimum_supported_version": "0.4.0",
+  "summary": "Update Center stabil, deteksi versi PWA akurat, changelog tampil, dan tombol update memiliki status proses yang jelas"
 }

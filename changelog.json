@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.4.3",
+    "date": "2026-09-15",
+    "title": "Update Center Stabil",
+    "new": [
+      "Status versi PWA dibaca dari Service Worker aktif",
+      "Tampilan Info Aplikasi menampilkan build, tanggal rilis, dan status instalasi"
+    ],
+    "improvements": [
+      "Cek Update memiliki status Memeriksa, Terbaru, dan Update tersedia",
+      "Update Sekarang menampilkan proses update dan tidak lagi terlihat seperti tombol mati",
+      "Tombol Pasang Aplikasi disembunyikan saat KIA sudah berjalan sebagai PWA"
+    ],
+    "fixes": [
+      "Memperbaiki Versi Terpasang yang masih tertulis v0.4.1 pada build v0.4.2",
+      "Memperbaiki Riwayat Update yang kosong karena format changelog tidak cocok dengan renderer",
+      "Memperbaiki kondisi Update tersedia palsu saat Service Worker sebenarnya sudah versi terbaru"
+    ]
+  },
+  {
     "version": "0.4.2",
     "date": "2026-09-13",
     "title": "Fast Auth, Hero HD & Typography",
@@ -17,5 +36,33 @@
       "Memperbaiki fallback Hero yang kembali menunjuk gambar JPG lama",
       "Legacy URL hero lokal JPG otomatis diarahkan ke aset PNG HD"
     ]
+  },
+  {
+    "version": "0.4.1",
+    "date": "2026-09-13",
+    "title": "Login & Hero Hotfix",
+    "new": [],
+    "improvements": [
+      "Memperpanjang ruang proses auth ketika Apps Script sedang cold start"
+    ],
+    "fixes": [
+      "Memulihkan tiga slide Hero pada landing"
+    ]
+  },
+  {
+    "version": "0.4.0",
+    "date": "2026-09-13",
+    "title": "Major Stability & Trust",
+    "new": [
+      "Album media program",
+      "Pusat Bantuan dan FAQ",
+      "Info Aplikasi dan Update Center"
+    ],
+    "improvements": [
+      "Workflow review dan publikasi program",
+      "Katalog program publik",
+      "Settings admin dikelompokkan"
+    ],
+    "fixes": []
   }
 ]

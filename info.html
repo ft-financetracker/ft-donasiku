@@ -1,1 +1,95 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#176b52"><title>Info Aplikasi | KIA</title><link rel="manifest" href="./manifest-v040.json"><link rel="icon" href="./icons/favicon-white-v040.ico?v=040"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet"><link rel="stylesheet" href="./assets/css/tokens.css"><link rel="stylesheet" href="./assets/css/components.css"><link rel="stylesheet" href="./assets/css/ui.css"><link rel="stylesheet" href="./assets/css/public-v040.css"><style>.info-page{padding:38px 0 100px}.info-hero{padding:28px}.info-hero h1{font-size:38px;margin:6px 0}.version-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.version-box{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}.version-box span{display:block;color:var(--muted);font-size:12px}.version-box strong{display:block;margin-top:5px;font-size:19px}.release{padding:18px;margin-top:12px}.release h3{margin:0 0 5px}.release ul{margin:10px 0 0;padding-left:20px;color:var(--muted);line-height:1.6}@media(max-width:700px){.version-grid{grid-template-columns:1fr}.info-hero h1{font-size:32px}}</style></head><body class="has-mobile-nav"><header><div class="container nav"><a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a><a class="btn btn-ghost" href="./">Beranda</a></div></header><main class="container info-page"><section class="card info-hero"><p class="hero-eyebrow" style="color:var(--primary)">INFO APLIKASI</p><h1>KIA — Donasi Online</h1><p class="muted">Founded by Finance Tracker</p><div class="version-grid"><div class="version-box"><span>Versi Terpasang</span><strong data-installed-version>v0.4.1</strong></div><div class="version-box"><span>Versi Terbaru</span><strong data-latest-version>Memeriksa…</strong></div><div class="version-box"><span>Status</span><strong data-update-status>—</strong></div></div><div class="hero-actions"><button class="btn btn-primary" data-check-update>Cek Update</button><button class="btn btn-soft" data-apply-update hidden>Update Sekarang</button><button class="btn btn-ghost" data-install-pwa>Pasang Aplikasi KIA</button></div><p class="muted mini" data-install-status></p></section><section class="section-block"><div class="section-title"><div><h2>Riwayat Update</h2><p class="muted">Perubahan yang dapat dirasakan pengguna.</p></div></div><div data-changelog><div class="skeleton skeleton-card"></div></div></section></main><nav class="mobile-bottom-nav"><a class="mobile-nav-item" href="./"><span class="material-symbols-outlined mobile-nav-icon">home</span><span>Beranda</span></a><a class="mobile-nav-item" href="./programs.html"><span class="material-symbols-outlined mobile-nav-icon">grid_view</span><span>Program</span></a><a class="mobile-nav-item mobile-nav-cta" href="./programs.html"><span class="diamond-cta"><span class="material-symbols-outlined diamond-glyph">volunteer_activism</span></span><span>Donasi</span></a><a class="mobile-nav-item" href="./help.html"><span class="material-symbols-outlined mobile-nav-icon">verified</span><span>Bantuan</span></a><a class="mobile-nav-item" href="./login.html"><span class="material-symbols-outlined mobile-nav-icon">account_circle</span><span>Akun</span></a></nav><script src="./assets/js/pwa-v040.js"></script><script src="./assets/js/info-v040.js"></script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#176b52">
+  <title>Info Aplikasi | KIA</title>
+  <link rel="manifest" href="./manifest-v040.json">
+  <link rel="icon" href="./icons/favicon-white-v040.ico?v=043">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/tokens.css">
+  <link rel="stylesheet" href="./assets/css/components.css">
+  <link rel="stylesheet" href="./assets/css/ui.css">
+  <link rel="stylesheet" href="./assets/css/public-v040.css">
+  <style>
+    .info-page{padding:30px 0 104px}.info-card{padding:26px;overflow:hidden}.info-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.info-brand{display:flex;gap:16px;align-items:center}.info-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:linear-gradient(145deg,var(--primary),var(--primary2));box-shadow:0 12px 28px rgba(23,107,82,.18)}.info-mark img{width:34px;height:34px;object-fit:contain}.info-kicker{margin:0 0 5px;color:var(--primary);font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.info-card h1{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0 0 6px}.founder{margin:0}.version-status{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 11px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}.version-status .material-symbols-outlined{font-size:18px}.version-status.is-checking{background:#f2f4f3;color:var(--muted)}.version-status.is-current{background:#e8f4ee;color:#176b52}.version-status.is-update{background:#fff3d8;color:#7c5a16}.version-status.is-error{background:#fff0ee;color:#a13b32}.version-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.version-box{padding:15px 16px;border:1px solid var(--border);border-radius:15px;background:linear-gradient(180deg,#fff,#fbfcfb)}.version-box>span{display:block;color:var(--muted);font-size:11px;font-weight:650}.version-box strong{display:block;margin-top:5px;font-family:var(--font-number);font-variant-numeric:tabular-nums lining-nums;font-size:20px;letter-spacing:-.035em}.version-meta{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font-size:10px}.update-panel{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px;padding:15px 16px;border:1px solid #dbe7e1;border-radius:15px;background:#f7fbf9}.update-copy{display:grid;gap:3px}.update-copy strong{font-size:13px}.update-copy span{font-size:11px;color:var(--muted)}.update-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.update-actions .material-symbols-outlined{font-size:18px}.install-note{display:flex;align-items:center;gap:7px;margin:12px 0 0}.install-note .material-symbols-outlined{font-size:17px;color:var(--primary)}.release-list{display:grid;gap:14px}.release-card{padding:20px;border:1px solid var(--border);border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(20,45,35,.045)}.release-card.is-current-release{border-color:#bfd9cf;box-shadow:0 13px 32px rgba(23,107,82,.08)}.release-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.release-head h3{margin:5px 0 0;font-size:18px}.release-head time{font-family:var(--font-number);font-variant-numeric:tabular-nums;color:var(--muted);font-size:11px}.release-version-row{display:flex;align-items:center;gap:8px}.release-version{font-family:var(--font-number);font-variant-numeric:tabular-nums;font-size:14px;color:var(--primary)}.release-current-pill{display:inline-flex;align-items:center;min-height:21px;padding:0 7px;border-radius:999px;background:#e8f4ee;color:#176b52;font-size:9px;font-weight:850;letter-spacing:.07em}.release-groups{display:grid;gap:10px;margin-top:16px}.release-group{padding:12px 13px;border-radius:13px;background:#fafcfb}.release-group-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:850;letter-spacing:.07em}.release-group-title .material-symbols-outlined{font-size:17px}.release-group ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.65}.release-new .release-group-title{color:#176b52}.release-improvement .release-group-title{color:#6e571d}.release-fix .release-group-title{color:#315f7b}.release-security .release-group-title{color:#7c3d74}.section-title{margin-top:24px}.section-title h2{font-size:27px}.section-title p{margin-top:5px}
+    @media(max-width:760px){.info-page{padding-top:14px}.info-card{padding:19px}.info-top{display:grid}.info-brand{align-items:flex-start}.info-mark{width:50px;height:50px;border-radius:16px}.info-mark img{width:29px;height:29px}.version-grid{grid-template-columns:1fr}.update-panel{align-items:flex-start;flex-direction:column}.update-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.update-actions .btn{width:100%;padding:0 12px}.update-actions .btn:last-child:nth-child(3){grid-column:1/-1}.release-head{gap:10px}.section-title h2{font-size:24px}}
+  </style>
+</head>
+<body class="has-mobile-nav">
+  <header>
+    <div class="container nav">
+      <a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a>
+      <a class="btn btn-ghost" href="./">Beranda</a>
+    </div>
+  </header>
+
+  <main class="container info-page">
+    <section class="card info-card">
+      <div class="info-top">
+        <div class="info-brand">
+          <div class="info-mark"><img src="./icons/kia-symbol-v030.png" alt=""></div>
+          <div>
+            <p class="info-kicker">Info Aplikasi</p>
+            <h1>KIA — Donasi Online</h1>
+            <p class="muted founder">Founded by Finance Tracker</p>
+          </div>
+        </div>
+        <div class="version-status is-checking" data-update-status><span class="material-symbols-outlined">sync</span><span>Memeriksa versi…</span></div>
+      </div>
+
+      <div class="version-grid">
+        <div class="version-box">
+          <span>Versi Terpasang</span>
+          <strong data-installed-version>Memeriksa…</strong>
+          <div class="version-meta"><span data-installed-build>Build —</span><span>PWA aktif</span></div>
+        </div>
+        <div class="version-box">
+          <span>Versi Terbaru</span>
+          <strong data-latest-version>Memeriksa…</strong>
+          <div class="version-meta"><span data-latest-build>Build —</span><span>Rilis KIA</span></div>
+        </div>
+        <div class="version-box">
+          <span>Tanggal Rilis</span>
+          <strong data-release-date>—</strong>
+          <div class="version-meta"><span>Stable channel</span><span>GitHub PWA</span></div>
+        </div>
+      </div>
+
+      <div class="update-panel">
+        <div class="update-copy">
+          <strong>Status Aplikasi</strong>
+          <span data-update-note>Memeriksa versi KIA yang sedang digunakan…</span>
+        </div>
+      </div>
+
+      <div class="update-actions">
+        <button class="btn btn-primary" type="button" data-check-update><span class="material-symbols-outlined">refresh</span><span>Cek Update</span></button>
+        <button class="btn btn-soft" type="button" data-apply-update hidden><span class="material-symbols-outlined">system_update_alt</span><span>Update Sekarang</span></button>
+        <button class="btn btn-ghost" type="button" data-install-pwa><span class="material-symbols-outlined">install_mobile</span><span>Pasang Aplikasi KIA</span></button>
+      </div>
+
+      <p class="muted mini install-note"><span class="material-symbols-outlined">devices</span><span data-install-status>Memeriksa status instalasi…</span></p>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <div><h2>Riwayat Update</h2><p class="muted">Perubahan penting yang dapat dirasakan pengguna KIA.</p></div>
+      </div>
+      <div class="release-list" data-changelog><div class="skeleton skeleton-card"></div></div>
+    </section>
+  </main>
+
+  <nav class="mobile-bottom-nav" aria-label="Navigasi KIA">
+    <a class="mobile-nav-item" href="./"><span class="material-symbols-outlined mobile-nav-icon">home</span><span>Beranda</span></a>
+    <a class="mobile-nav-item" href="./programs.html"><span class="material-symbols-outlined mobile-nav-icon">grid_view</span><span>Program</span></a>
+    <a class="mobile-nav-item mobile-nav-cta" href="./programs.html"><span class="diamond-cta"><span class="material-symbols-outlined diamond-glyph">volunteer_activism</span></span><span>Donasi</span></a>
+    <a class="mobile-nav-item" href="./help.html"><span class="material-symbols-outlined mobile-nav-icon">verified</span><span>Bantuan</span></a>
+    <a class="mobile-nav-item" href="./login.html"><span class="material-symbols-outlined mobile-nav-icon">account_circle</span><span>Akun</span></a>
+  </nav>
+
+  <script src="./assets/js/pwa-v040.js?v=043"></script>
+  <script src="./assets/js/info-v040.js?v=043"></script>
+</body>
+</html>
