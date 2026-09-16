@@ -544,59 +544,27 @@ function cacheAuthUserRow(user){
   authUserCache.set(email,{user:{...user},expires:Date.now()+AUTH_USER_CACHE_TTL});
 }
 
-let authWarmPromise=null;
-let authCacheReadyAt=0;
-
 async function lookupAuthUser(email){
   const key=normEmail(email);
-  let cached=authUserCache.get(key);
+  const cached=authUserCache.get(key);
   if(cached&&cached.expires>Date.now()) return cached.user;
   if(cached) authUserCache.delete(key);
 
-  // Jika cold-start sedang melakukan warm cache, beri kesempatan singkat agar
-  // login tidak langsung membuat request Spreadsheet kedua yang bersaing.
-  if(authWarmPromise){
-    await Promise.race([
-      authWarmPromise.catch(()=>false),
-      new Promise(resolve=>setTimeout(resolve,1800))
-    ]);
-    cached=authUserCache.get(key);
-    if(cached&&cached.expires>Date.now()) return cached.user;
-  }
-
+  // v0.5.7: targeted lookup lebih cepat daripada warm seluruh tabel USERS.
+  // Ini juga menghindari request warm cache yang bersaing dengan login pertama.
   const user=await gas('findOne',{
     sheet:'01_USERS',
     filters:{email:key,status:'ACTIVE'}
-  },{timeout:14000,attempts:2});
+  },{timeout:12000,attempts:2});
 
   if(user) cacheAuthUserRow(user);
   return user;
 }
 
-async function warmAuthUserCache(){
-  try{
-    const rows=await gas('listWhere',{
-      sheet:'01_USERS',
-      filters:{status:'ACTIVE'},
-      limit:5000
-    },{timeout:18000,attempts:2});
-    (rows||[]).forEach(cacheAuthUserRow);
-    authCacheReadyAt=Date.now();
-    return true;
-  }catch(err){
-    console.warn('AUTH_CACHE_WARM_FAILED',err.code||err.message);
-    return false;
-  }
-}
-
 function ensureAuthWarm(){
-  if(authCacheReadyAt&&Date.now()-authCacheReadyAt<AUTH_USER_CACHE_TTL&&authUserCache.size){
-    return Promise.resolve(true);
-  }
-  if(!authWarmPromise){
-    authWarmPromise=warmAuthUserCache().finally(()=>{authWarmPromise=null});
-  }
-  return authWarmPromise;
+  // Dipertahankan untuk kompatibilitas /health?warm=1, tetapi tidak lagi
+  // membaca ribuan user pada cold start. Wake-up Render cukup lewat /health.
+  return Promise.resolve(true);
 }
 
 async function saveSession(req,user){
@@ -614,16 +582,39 @@ async function saveSession(req,user){
     revoked_at:''
   };
 
+  // v0.5.7: session WAJIB persisted sebelum browser menerima token.
+  // Apps Script action sudah dipangkas menjadi satu upsert session saja,
+  // sehingga tidak ada race "login berhasil tetapi dashboard belum mengenal sesi".
   const result=await gas('authLoginCommitFast',{
     user_id:user.user_id,
     platform_role:user.platform_role||'USER',
     session_row:sessionRow
-  },{timeout:15000,attempts:2});
+  },{timeout:12000,attempts:1});
+
+  const committedUser={...user,...(result?.user||{})};
+  cacheAuthUserRow(committedUser);
+  cacheSessionToken(token,committedUser);
+
+  // Metadata user bukan bagian critical path login. Jalankan setelah session aman.
+  // Gagal update last_login tidak membatalkan sesi yang sudah valid.
+  const userPatch={
+    last_login_at:now,
+    updated_at:now
+  };
+  if(user.platform_role) userPatch.platform_role=user.platform_role;
+  gas('update',{
+    sheet:'01_USERS',
+    idField:'user_id',
+    id:user.user_id,
+    patch:userPatch
+  },{timeout:12000,attempts:1}).catch(err=>{
+    console.warn('AUTH_LOGIN_TOUCH_DEFERRED',err.code||err.message);
+  });
 
   return {
     token,
-    session:result.session||sessionRow,
-    user:result.user||user
+    session:result?.session||sessionRow,
+    user:committedUser
   };
 }
 
@@ -642,18 +633,13 @@ async function sessionUser(req){
 }
 
 app.get('/health',async(req,res)=>{
-  if(String(req.query.warm||'')==='1'){
-    await Promise.race([
-      ensureAuthWarm(),
-      new Promise(resolve=>setTimeout(resolve,9000))
-    ]).catch(()=>false);
-  }
+  // ?warm=1 hanya membangunkan runtime; tidak lagi memicu full USERS scan.
   res.json({
     success:true,
     data:{
       app:'KIA Backend',
-      version:'0.5.6',
-      auth_cache_ready:!!authCacheReadyAt,
+      version:'0.5.7',
+      auth_cache_entries:authUserCache.size,
       doku_env:DOKU_ENV
     }
   });
@@ -984,7 +970,7 @@ function sendError(res,e){
   const statusMap={
     UNAUTHORIZED:401,ADMIN_REQUIRED:403,SUPER_ADMIN_REQUIRED:403,FORBIDDEN:403,
     USER_NOT_FOUND:404,PROGRAM_NOT_FOUND:404,PROFILE_NOT_FOUND:404,ORGANIZATION_NOT_FOUND:404,
-    PROGRAM_MEDIA_NOT_FOUND:404,PROGRAM_UPDATE_NOT_FOUND:404,DONATION_NOT_FOUND:404,PAYMENT_NOT_FOUND:404,REVISION_NOT_FOUND:404,
+    PROGRAM_MEDIA_NOT_FOUND:404,PROGRAM_UPDATE_NOT_FOUND:404,DONATION_NOT_FOUND:404,PAYMENT_NOT_FOUND:404,REVISION_NOT_FOUND:404,SOCIAL_ACCOUNT_REQUIRED:409,
     INVALID_DECISION:400,INVALID_REVIEW_KIND:400,INCOMPLETE_PROGRAM:400,INCOMPLETE_PROGRAM_UPDATE:400,INVALID_MEDIA_TYPE:400,INVALID_DONATION_AMOUNT:400,INVALID_PAYMENT_METHOD:400,INVALID_CHECKOUT_TOKEN:401,
     MISSING_MEDIA_DATA:400,MEDIA_TOO_LARGE:413,VERIFICATION_REQUIRED:409,INVALID_PROGRAM_STATUS:409,
     SELF_ROLE_CHANGE_BLOCKED:409,LAST_SUPER_ADMIN:409,REVISION_NOT_PENDING:409,PAYMENT_AMOUNT_MISMATCH:409,PAYMENT_DONATION_MISMATCH:409,DONATION_ALREADY_PAID:409,PAYMENT_METHOD_ALREADY_ACTIVE:409,PAYMENT_ATTEMPT_LIMIT:429,
@@ -1006,7 +992,8 @@ function sendError(res,e){
     INVALID_PAYMENT_METHOD:'Metode pembayaran belum didukung.',
     DONATION_ALREADY_PAID:'Donasi ini sudah dibayar.',PAYMENT_METHOD_ALREADY_ACTIVE:'Metode tersebut sedang aktif. Pilih metode pembayaran yang berbeda.',PAYMENT_ATTEMPT_LIMIT:'Batas percobaan metode pembayaran telah tercapai. Silakan buat donasi baru jika masih diperlukan.',
     INVALID_CHECKOUT_TOKEN:'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.',
-    INCOMPLETE_PROGRAM_UPDATE:'Judul dan isi perkembangan wajib diisi.'
+    INCOMPLETE_PROGRAM_UPDATE:'Judul dan isi perkembangan wajib diisi.',
+    SOCIAL_ACCOUNT_REQUIRED:'Interaksi hanya tersedia untuk donasi dari akun KIA yang tidak disembunyikan sebagai anonim.'
   };
   const status=Number(e.status)||statusMap[code]||500;
   res.status(status).json({success:false,code,message:friendly[code]||e.message||'Terjadi kesalahan server.'});
@@ -1313,53 +1300,39 @@ app.get('/api/public/programs/:id',async(req,res)=>{
 app.get('/api/public/donations/:id/social',async(req,res)=>{
   try{
     const donationId=text(req.params.id,180);
-    const data=await publicCached(`donation-social:${donationId}`,()=>gas('publicDonationSocialFast',{donation_id:donationId},{timeout:18000,attempts:2}),{freshMs:10000,staleMs:60000});
-    let viewer={authenticated:false,loved:false};
-    const user=await sessionUser(req).catch(()=>null);
-    if(user){
-      const reaction=await gas('findOne',{sheet:'24_DONATION_REACTIONS',filters:{donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE',status:'ACTIVE'}},{timeout:10000,attempts:1}).catch(()=>null);
-      viewer={authenticated:true,loved:!!reaction};
-    }
-    res.json({success:true,data:{...data,viewer}});
+    const token_hash=requestTokenHash(req);
+    const data=await gas('publicDonationSocialFast',{
+      donation_id:donationId,
+      viewer_token_hash:token_hash||''
+    },{timeout:14000,attempts:2});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/social/donations/:id/love',async(req,res)=>{
   try{
-    const user=await sessionUser(req);
-    if(!user) return res.status(401).json({success:false,message:'Masuk ke akun KIA untuk memberi love.'});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) return res.status(401).json({success:false,code:'UNAUTHORIZED',message:'Masuk ke akun KIA untuk memberi love.'});
     const donationId=text(req.params.id,180);
-    if(!allowSocialWrite(`love:${user.user_id}:${donationId}`,700)) return res.status(429).json({success:false,message:'Terlalu cepat. Coba lagi sebentar.'});
-    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:donationId,status:'PAID'}},{timeout:12000,attempts:1});
-    if(!donation) return res.status(404).json({success:false,message:'Donasi tervalidasi tidak ditemukan.'});
-    const existing=await gas('findOne',{sheet:'24_DONATION_REACTIONS',filters:{donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE'}},{timeout:12000,attempts:1});
-    const now=new Date().toISOString();
-    let liked=true;
-    if(existing){
-      liked=String(existing.status||'').toUpperCase()!=='ACTIVE';
-      await gas('update',{sheet:'24_DONATION_REACTIONS',idField:'reaction_id',id:existing.reaction_id,patch:{status:liked?'ACTIVE':'REMOVED',updated_at:now}},{timeout:15000,attempts:1});
-    }else{
-      await gas('insert',{sheet:'24_DONATION_REACTIONS',row:{reaction_id:id('rct'),donation_id:donationId,user_id:user.user_id,reaction_type:'LOVE',status:'ACTIVE',created_at:now,updated_at:now}},{timeout:15000,attempts:1});
-    }
+    if(!allowSocialWrite(`love:${token_hash.slice(0,16)}:${donationId}`,700)) return res.status(429).json({success:false,message:'Terlalu cepat. Coba lagi sebentar.'});
+    const data=await gas('socialToggleLoveFast',{token_hash,donation_id:donationId},{timeout:14000,attempts:1});
     clearPublicResponseCache();
-    res.json({success:true,data:{liked}});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/social/donations/:id/messages',async(req,res)=>{
   try{
-    const user=await sessionUser(req);
-    if(!user) return res.status(401).json({success:false,message:'Masuk ke akun KIA untuk mengirim doa atau pesan.'});
+    const token_hash=requestTokenHash(req);
+    if(!token_hash) return res.status(401).json({success:false,code:'UNAUTHORIZED',message:'Masuk ke akun KIA untuk mengirim doa atau pesan.'});
     const donationId=text(req.params.id,180);
     const message=text(req.body?.message,280);
     if(!message) return res.status(400).json({success:false,message:'Tulis doa atau pesan terlebih dahulu.'});
-    if(!allowSocialWrite(`msg:${user.user_id}:${donationId}`,8000)) return res.status(429).json({success:false,message:'Pesan baru dapat dikirim lagi beberapa detik lagi.'});
-    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:donationId,status:'PAID'}},{timeout:12000,attempts:1});
-    if(!donation) return res.status(404).json({success:false,message:'Donasi tervalidasi tidak ditemukan.'});
-    const now=new Date().toISOString();
-    await gas('insert',{sheet:'25_DONATION_MESSAGES',row:{message_id:id('msg'),donation_id:donationId,user_id:user.user_id,display_name:text(user.full_name,140)||'Pengguna KIA',message,status:'ACTIVE',created_at:now,updated_at:now}},{timeout:15000,attempts:1});
+    if(!allowSocialWrite(`msg:${token_hash.slice(0,16)}:${donationId}`,5000)) return res.status(429).json({success:false,message:'Pesan baru dapat dikirim lagi beberapa detik lagi.'});
+    const message_id=text(req.body?.message_id,120)||id('msg');
+    const data=await gas('socialCreateMessageFast',{token_hash,donation_id:donationId,message,message_id},{timeout:14000,attempts:1});
     clearPublicResponseCache();
-    res.status(201).json({success:true,data:{created:true}});
+    res.status(201).json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
@@ -1716,7 +1689,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.6'
+          version:'0.5.7'
         }
       }
     });
@@ -1791,8 +1764,8 @@ app.post('/api/security/logout-all',async(req,res)=>{
 
 app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);
-  setTimeout(()=>ensureAuthWarm(),250);
-  setTimeout(()=>warmPublicCache(),700);
+  // Hindari cold-start melakukan scan USERS + public bootstrap bersamaan dengan request pertama.
+  setTimeout(()=>warmPublicCache(),12000);
   setTimeout(()=>reconcilePendingPayments(),20000);
   const reconcileTimer=setInterval(()=>reconcilePendingPayments(),DOKU_RECONCILE_INTERVAL_MS);
   reconcileTimer.unref?.();
