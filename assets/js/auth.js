@@ -168,16 +168,15 @@ window.KiaAuth = {
     try{
       await Promise.race([
         this.warmup(),
-        new Promise(resolve=>setTimeout(resolve,2500))
+        new Promise(resolve=>setTimeout(resolve,800))
       ]);
     }catch(_){ }
     return this.request('/api/auth/login',{
       method:'POST',
       body:JSON.stringify(payload),
-      timeout:35000,
-      attempts:2,
-      retrySafe:true,
-      retryDelay:700
+      timeout:24000,
+      attempts:1,
+      retrySafe:false
     });
   },
 
@@ -196,7 +195,7 @@ window.KiaAuth = {
 
     this._warmupPromise=(async()=>{
       const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),15000);
+      const timer=setTimeout(()=>controller.abort(),10000);
       try{
         const res=await fetch(base+'/health?warm=1',{
           method:'GET',

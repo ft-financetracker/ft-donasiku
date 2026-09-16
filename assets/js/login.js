@@ -28,13 +28,13 @@ form.addEventListener('submit',async e=>{
   });
 
   const slow1=setTimeout(()=>KiaUI.setLoading({
-    title:'Server sedang menyiapkan data',
-    message:'Login tetap diproses. Tidak perlu menekan tombol kembali atau memuat ulang.'
-  }),8000);
+    title:'Menyiapkan sesi akun',
+    message:'KIA sedang menyambungkan akun. Tidak perlu memuat ulang halaman.'
+  }),6000);
   const slow2=setTimeout(()=>KiaUI.setLoading({
     title:'Proses sedikit lebih lama',
-    message:'KIA sedang menunggu gateway data. Permintaan login tidak dikirim berulang secara sembarangan.'
-  }),20000);
+    message:'Login masih berjalan. KIA tidak menggandakan permintaan login saat server lambat.'
+  }),14000);
 
   try{
     const r=await KiaAuth.login(payload);

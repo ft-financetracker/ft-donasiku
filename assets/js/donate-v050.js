@@ -69,7 +69,7 @@
       const token=String(r.data?.view_token||'');
       if(!token)throw new Error('Tautan pembayaran belum tersedia.');
       try{sessionStorage.setItem(paymentShellKey(token),JSON.stringify({saved_at:Date.now(),data:r.data}))}catch(_){ }
-      location.replace('./payment.html?token='+encodeURIComponent(token)+'&v=056');
+      location.replace('./payment.html?token='+encodeURIComponent(token)+'&v=057');
     }catch(err){
       showStatus(err.message||'Checkout belum dapat dibuat.');
       setCheckoutBusy(false);

@@ -1,8 +1,8 @@
 {
-  "version": "0.5.6",
-  "build": 56,
+  "version": "0.5.7",
+  "build": 57,
   "released_at": "2026-09-16",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Compact Live Donation cards, responsive donor feed, donor social timeline, love/doa interactions, profile frames, and activity badges"
+  "summary": "Social reliability, account-only donor interactions, corrected donor badges, two-line program summary feed, and faster login/session handling"
 }

@@ -145,7 +145,7 @@
       if(!response.ok||!r.success)throw new Error(r.message||'Metode pembayaran belum dapat diganti.');
 
       token=r.data.view_token;
-      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=056&t='+Date.now();
+      const nextUrl='./payment.html?token='+encodeURIComponent(token)+'&v=057&t='+Date.now();
       history.replaceState(null,'',nextUrl);
 
       // Render attempt baru langsung; tidak menunggu reload/cache browser.
