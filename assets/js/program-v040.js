@@ -29,28 +29,28 @@
   function donorInitials(name){const p=String(name||'Hamba Allah').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'H')+(p[1]?.[0]||'')).toUpperCase()}
   function donorBadgeClass(code){return String(code||'GUEST').toLowerCase()}
   function donorFrame(profile){return String(profile?.frame_code||'DEFAULT').toLowerCase()}
-  function donorAvatar(x){const donor=x.donor_label||'Hamba Allah',p=x.donor_profile||null,url=String(p?.avatar_url||'').trim();return `<div class="donor-avatar-frame-v057 frame-${esc(donorFrame(p))}" aria-hidden="true">${url?`<img src="${esc(url)}" alt="">`:`<span>${esc(donorInitials(donor))}</span>`}</div>`}
+  function donorAvatar(x){const donor=x.donor_label||'Hamba Allah',p=x.donor_profile||null,url=String(p?.avatar_url||'').trim();return `<div class="donor-avatar-frame-v058 frame-${esc(donorFrame(p))}" aria-hidden="true">${url?`<img src="${esc(url)}" alt="">`:`<span>${esc(donorInitials(donor))}</span>`}</div>`}
   function donationDateTime(v){if(!v)return'—';try{return new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(v))}catch{return v}}
   function donationRowHtml(x,index){
     const donor=x.donor_label||'Hamba Allah',message=String(x.message||'').trim(),social=!!x.social_enabled;
     const attrs=social?`data-donation-ref="${esc(x.donation_ref||'')}" data-social-enabled="1" tabindex="0" role="button" aria-label="Buka timeline donasi ${esc(donor)}"`:`data-social-enabled="0" role="group"`;
-    return `<article class="donation-row-v057 donation-row-summary-v057 ${social?'is-social':'is-static'}" ${attrs}>
-      <div class="donation-cell-no-v057">#${index}</div>
-      <div class="donation-cell-profile-v057">${donorAvatar(x)}</div>
-      <div class="donation-cell-person-v057"><strong>${esc(donor)}</strong>${message?`<span>·</span><em>“${esc(message)}”</em>`:'<span class="muted">· Tanpa pesan</span>'}</div>
-      <div class="donation-cell-program-v057">${esc(x.program_name||program?.program_name||'Program KIA')}</div>
-      <div class="donation-cell-badge-v057"><span class="donor-badge donor-badge--${donorBadgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Tamu')}</span></div>
-      <div class="donation-cell-amount-v057"><strong>${idr(x.amount)}</strong><time>${esc(donationDateTime(x.paid_at))}</time></div>
+    return `<article class="donation-row-v058 donation-row-summary-v058 ${social?'is-social':'is-static'}" ${attrs}>
+      <div class="donation-cell-no-v058">#${index}</div>
+      <div class="donation-cell-profile-v058">${donorAvatar(x)}</div>
+      <div class="donation-cell-person-v058"><strong>${esc(donor)}</strong>${message?`<span>·</span><em>“${esc(message)}”</em>`:'<span class="muted">· Tanpa pesan</span>'}</div>
+      <div class="donation-cell-program-v058">${esc(x.program_name||program?.program_name||'Program KIA')}</div>
+      <div class="donation-cell-badge-v058"><span class="donor-badge donor-badge--${donorBadgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Tamu')}</span></div>
+      <div class="donation-cell-amount-v058"><strong>${idr(x.amount)}</strong><time>${esc(donationDateTime(x.paid_at))}</time></div>
     </article>`
   }
-  function prefetchRecentSocial(items){const refs=(items||[]).filter(x=>x.social_enabled&&x.donation_ref).slice(0,3);refs.forEach(x=>window.KiaDonationSocial?.seed?.(x));setTimeout(()=>refs.forEach((x,i)=>setTimeout(()=>window.KiaDonationSocial?.prefetch?.(x.donation_ref),i*260)),150)}
+  function prefetchRecentSocial(items){const refs=(items||[]).filter(x=>x.social_enabled&&x.donation_ref);refs.forEach(x=>window.KiaDonationSocial?.seed?.(x));setTimeout(()=>refs.slice(0,5).forEach((x,i)=>setTimeout(()=>window.KiaDonationSocial?.prefetch?.(x.donation_ref),i*180)),80)}
   function recentDonationsHtml(){
     if(detail?._summary_only)return '<div class="empty-room">Memuat donasi tervalidasi terbaru…</div>';
     const items=(detail?.recent_donations||[]).slice(0,5);
     if(!items.length)return '<div class="empty-room">Live Donation akan muncul otomatis setelah pembayaran berhasil tervalidasi.</div>';
     const rows=items.map((x,i)=>donationRowHtml(x,i+1)).join('');
     prefetchRecentSocial(items);
-    return `<div class="program-donation-feed-v057">${rows}</div><div class="program-donation-feed-footer-v057"><span class="muted mini">Timeline interaksi tersedia pada donasi dari akun KIA.</span><a class="btn btn-soft" href="./program-donations.html?id=${encodeURIComponent(program.program_id)}">Lihat Semua Donasi →</a></div>`;
+    return `<div class="program-donation-feed-v058">${rows}</div><div class="program-donation-feed-footer-v058"><span class="muted mini">Timeline interaksi tersedia pada donasi dari akun KIA.</span><a class="btn btn-soft" href="./program-donations.html?id=${encodeURIComponent(program.program_id)}">Lihat Semua Donasi →</a></div>`;
   }
 
   function transparencyHtml(){
@@ -166,13 +166,13 @@
     }catch(_){ }
   }
 
-  function detailCacheKey(id){return 'kia_program_detail_v057_'+id}
+  function detailCacheKey(id){return 'kia_program_detail_v058_'+id}
   function legacyDetailCacheKeys(id){return ['kia_program_detail_v056_'+id,'kia_program_detail_v055_'+id,'kia_program_detail_v054_'+id,'kia_program_detail_v052_'+id,'kia_program_detail_v051_'+id]}
   function readDetailCache(id){try{for(const k of [detailCacheKey(id),...legacyDetailCacheKeys(id)]){const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&Date.now()-x.saved_at<6*3600000)return x.data}return null}catch{return null}}
   function writeDetailCache(id,data){try{localStorage.setItem(detailCacheKey(id),JSON.stringify({saved_at:Date.now(),data}))}catch{}}
   function summaryFallback(id){
     try{
-      const bootstrap=(JSON.parse(localStorage.getItem('kia_public_bootstrap_v057')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v056')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v055')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v054')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v052')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null'))?.data;
+      const bootstrap=(JSON.parse(localStorage.getItem('kia_public_bootstrap_v058')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v056')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v055')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v054')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v052')||'null')||JSON.parse(localStorage.getItem('kia_public_bootstrap_v051')||'null'))?.data;
       const fromBootstrap=(bootstrap?.programs||[]).find(x=>String(x.program_id)===String(id));
       if(fromBootstrap)return {program:fromBootstrap,transparency:{paid_donations:fromBootstrap.paid_donations||0},trust:{program_reviewed:true,owner_verified:false},_summary_only:true};
       for(let i=0;i<localStorage.length;i++){

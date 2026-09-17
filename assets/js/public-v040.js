@@ -3,8 +3,8 @@
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]));
-  const CACHE_KEY='kia_public_bootstrap_v057';
-  const LEGACY_CACHE_KEYS=['kia_public_bootstrap_v056','kia_public_bootstrap_v055','kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051'];
+  const CACHE_KEY='kia_public_bootstrap_v058';
+  const LEGACY_CACHE_KEYS=['kia_public_bootstrap_v057','kia_public_bootstrap_v056','kia_public_bootstrap_v055','kia_public_bootstrap_v054','kia_public_bootstrap_v052','kia_public_bootstrap_v051'];
   let lastAppliedInvalidation=Number(localStorage.getItem('kia_public_invalidate_at')||0);
   const CACHE_MAX_AGE=6*60*60*1000;
 
@@ -56,12 +56,28 @@
     if(!rows.length){root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Belum ada donasi tervalidasi. Live Donation akan terisi otomatis setelah pembayaran berstatus PAID.</div>';return}
     root.innerHTML=rows.map(x=>{
       const donor=x.donor_label||'Hamba Allah',message=cleanMessage(x.message);
-      return `<article class="card live-donation-card-v057">
-        <div class="live-donation-head-v057"><strong>${idr(x.amount)}</strong><span class="donor-badge donor-badge--${badgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Tamu')}</span></div>
-        <div class="live-donation-program-v057" title="${esc(x.program_name||'Program KIA')}">${esc(x.program_name||'Program KIA')}</div>
-        <div class="live-donation-person-v057"><strong>${esc(donor)}</strong>${message?`<span>·</span><em>“${esc(message)}”</em>`:'<span class="muted">· Tanpa pesan</span>'}</div>
+      return `<article class="card live-donation-card-v058">
+        <div class="live-donation-head-v058"><strong>${idr(x.amount)}</strong><span class="donor-badge donor-badge--${badgeClass(x.donor_badge_code)}">${esc(x.donor_badge||'Tamu')}</span></div>
+        <div class="live-donation-program-v058" title="${esc(x.program_name||'Program KIA')}">${esc(x.program_name||'Program KIA')}</div>
+        <div class="live-donation-person-v058"><strong>${esc(donor)}</strong>${message?`<span>·</span><em>“${esc(message)}”</em>`:'<span class="muted">· Tanpa pesan</span>'}</div>
       </article>`;
-    }).join('')
+    }).join('');
+    requestAnimationFrame(startLiveCarousel);
+  }
+  let liveTimer=null;
+  function startLiveCarousel(){
+    const root=$('[data-live-donations]');if(!root)return;
+    clearInterval(liveTimer);
+    const cards=[...root.querySelectorAll('.live-donation-card-v058')];
+    if(cards.length<=3)return;
+    let index=0;
+    const advance=()=>{
+      if(document.hidden||root.matches(':hover'))return;
+      index=(index+1)%cards.length;
+      cards[index]?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
+    };
+    liveTimer=setInterval(advance,4200);
+    root.addEventListener('pointerdown',()=>clearInterval(liveTimer),{once:true});
   }
   function renderFaq(items){const root=$('[data-faq-preview]');if(root)root.innerHTML=(items||[]).slice(0,4).map(x=>`<details><summary>${esc(x.question)}</summary><p>${esc(x.answer)}</p></details>`).join('')}
   function applyData(data){
@@ -73,7 +89,7 @@
   }
   function publicError(){const root=$('[data-public-programs]');if(root)root.innerHTML='<div class="empty-state" style="grid-column:1/-1">Program belum dapat dimuat. <button class="btn btn-ghost" type="button" data-public-retry>Coba Lagi</button></div>';if($('[data-live-donations]'))$('[data-live-donations]').innerHTML='<div class="empty-state" style="grid-column:1/-1">Live Donation belum dapat dimuat.</div>';$('[data-public-retry]')?.addEventListener('click',load)}
   async function prefetchCatalog(seed){
-    const key='kia_catalog_v057_1_ALL_';
+    const key='kia_catalog_v058_1_ALL_';
     try{
       if(seed?.programs?.length){
         const total=Number(seed.stats?.active_programs)||seed.programs.length;

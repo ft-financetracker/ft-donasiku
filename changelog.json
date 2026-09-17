@@ -1,35 +1,53 @@
 [
   {
+    "version": "0.5.8",
+    "build": 58,
+    "date": "2026-09-17",
+    "title": "Payment, Social & UX Polish",
+    "new": [
+      "Room Donasi Publik dengan filter Hari Ini, 7 Hari, Bulan Ini, dan Semua tanpa mengekspos email, nomor telepon, ID internal, VA, atau referensi provider",
+      "Status pembayaran berhasil menyediakan Cetak Struk langsung dari browser",
+      "Payment Hero menggunakan visual Hero KIA yang dapat diganti admin melalui Hero & Media"
+    ],
+    "improvements": [
+      "Live Donation landing menampilkan hingga 10 donasi terbaru dalam carousel horizontal otomatis yang tetap bisa digeser manual",
+      "Timeline Dukungan membuka shell donor lebih cepat dari seed/cache dan menyinkronkan aktivitas di background",
+      "Love dan Kirim Doa memakai optimistic UI dan satu commit database per aksi tanpa reload timeline penuh",
+      "Badge publik diperjelas menjadi Tamu, Terdaftar, Terverifikasi, Moderator, Super Admin, atau Anonim",
+      "Halaman menunggu/berhasil pembayaran dirombak dengan hero horizontal compact, hierarchy status yang lebih kuat, dan action bar responsif",
+      "Ganti Metode menggunakan panel pilihan yang lebih jelas dan state loading aman",
+      "Status payment melakukan local polling otomatis; tombol Sinkronkan Status tetap menjadi tindakan manual dan tidak terlihat seolah autoplay"
+    ],
+    "fixes": [
+      "Memperbaiki Riwayat Update v0.5.6 dan v0.5.7 yang tampil kosong karena renderer lama tidak membaca format groups",
+      "Mengurangi skeleton lama saat membuka timeline dan wait state panjang saat Love/Doa",
+      "Memperbaiki default badge Akun KIA menjadi label publik yang lebih ringkas dan konsisten",
+      "Setelah webhook mengubah payment menjadi PAID, halaman KIA mendeteksi perubahan otomatis tanpa menunggu pengguna menekan cek pembayaran"
+    ],
+    "security": [
+      "Room Donasi hanya menggunakan data publik tervalidasi dan tetap menghormati anonim sebagai Hamba Allah",
+      "Love/Doa tetap hanya dapat ditulis oleh user login dan target donasi wajib berasal dari akun non-anonim",
+      "PAID tetap hanya berasal dari webhook atau verifikasi server-side DOKU; polling browser tidak pernah menetapkan PAID sendiri"
+    ]
+  },
+  {
     "version": "0.5.7",
     "build": 57,
     "date": "2026-09-16",
     "title": "Social Reliability & Auth Speed",
-    "groups": [
-      {
-        "label": "PERBAIKAN",
-        "items": [
-          "Interaksi Love/Doa hanya untuk donasi yang dibuat lewat akun KIA dan tidak anonim",
-          "Badge donor dibedakan: Tamu, Akun KIA, Terverifikasi, dan Anonim",
-          "Timeline memakai cache/prefetch dan aksi optimistik agar tidak menunggu reload kedua",
-          "Login tidak lagi menunggu full USERS warm-up dan session persistence tidak memblok UI terlalu lama"
-        ]
-      },
-      {
-        "label": "LAYOUT",
-        "items": [
-          "Ringkasan Program minimum 2 baris di desktop dan maksimum 3 baris di mobile",
-          "Daftar Semua Donasi tetap 1 baris di desktop dengan kolom No · Profil · Nama+Pesan · Program · Badge · Nominal+DateTime",
-          "Live Donation landing tetap 3 baris compact: nominal+badge, program, nama+pesan"
-        ]
-      },
-      {
-        "label": "PERFORMA",
-        "items": [
-          "Social read/write dipadatkan menjadi compound Apps Script action",
-          "Metadata donor penting dimaterialisasi ke 23_LIVE_DONATIONS untuk mengurangi lookup berulang",
-          "Startup backend menunda public warm cache agar tidak berebut gateway dengan login pertama"
-        ]
-      }
+    "improvements": [
+      "Ringkasan Program minimum 2 baris di desktop dan maksimum 3 baris di mobile",
+      "Daftar Semua Donasi tetap 1 baris di desktop dengan kolom No · Profil · Nama+Pesan · Program · Badge · Nominal+DateTime",
+      "Live Donation landing tetap 3 baris compact: nominal+badge, program, nama+pesan",
+      "Social read/write dipadatkan menjadi compound Apps Script action",
+      "Metadata donor penting dimaterialisasi ke 23_LIVE_DONATIONS untuk mengurangi lookup berulang",
+      "Startup backend menunda public warm cache agar tidak berebut gateway dengan login pertama"
+    ],
+    "fixes": [
+      "Interaksi Love/Doa hanya untuk donasi yang dibuat lewat akun KIA dan tidak anonim",
+      "Badge donor dibedakan: Tamu, Akun KIA, Terverifikasi, dan Anonim",
+      "Timeline memakai cache/prefetch dan aksi optimistik agar tidak menunggu reload kedua",
+      "Login tidak lagi menunggu full USERS warm-up dan session persistence tidak memblok UI terlalu lama"
     ]
   },
   {
@@ -37,24 +55,16 @@
     "build": 56,
     "date": "2026-09-16",
     "title": "Donor Social & Compact Donation Feed",
-    "groups": [
-      {
-        "label": "BARU",
-        "items": [
-          "Timeline interaksi per donasi tervalidasi",
-          "Love dan doa/pesan untuk user login",
-          "Profil donor aman dengan level, activity badge, dan frame dasar"
-        ]
-      },
-      {
-        "label": "PENINGKATAN",
-        "items": [
-          "Live Donation landing dikunci menjadi 3 baris compact",
-          "Donasi program desktop memakai kolom No · Profil · Nama+Pesan · Program · Badge · Nominal+DateTime",
-          "Responsive feed maksimal 2–3 baris pada layar kecil",
-          "Cache lineage v0.5.6 tetap membawa fallback v0.5.5/v0.5.4"
-        ]
-      }
+    "new": [
+      "Timeline interaksi per donasi tervalidasi",
+      "Love dan doa/pesan untuk user login",
+      "Profil donor aman dengan level, activity badge, dan frame dasar"
+    ],
+    "improvements": [
+      "Live Donation landing dikunci menjadi 3 baris compact",
+      "Donasi program desktop memakai kolom No · Profil · Nama+Pesan · Program · Badge · Nominal+DateTime",
+      "Responsive feed maksimal 2–3 baris pada layar kecil",
+      "Cache lineage v0.5.6 tetap membawa fallback v0.5.5/v0.5.4"
     ]
   },
   {

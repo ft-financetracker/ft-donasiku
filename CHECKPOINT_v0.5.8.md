@@ -1,0 +1,22 @@
+# Checkpoint v0.5.8
+
+- [ ] Replace Apps Script `Code.gs`.
+- [ ] Jalankan `migrateKiaV058()` SATU KALI.
+- [ ] Sheet `23_LIVE_DONATIONS` memiliki kolom `platform_role` dan `identity_verified`.
+- [ ] Deploy New Version Apps Script pada deployment yang sama.
+- [ ] Upload/replace isi folder `github/` ke root repo.
+- [ ] Replace isi folder `server/` di repo.
+- [ ] Render deploy successful.
+- [ ] `/health` = `0.5.8`.
+- [ ] Info Aplikasi = `v0.5.8`, Build `58`.
+- [ ] Riwayat v0.5.6/v0.5.7 tidak kosong.
+- [ ] Timeline donor membuka shell cepat dan refresh background.
+- [ ] Love/unlove terasa instan dan tersimpan setelah reopen.
+- [ ] Doa tampil instan dan tersimpan setelah reopen.
+- [ ] Badge Tamu/Terdaftar/Terverifikasi/Moderator/Super Admin benar.
+- [ ] Live Donation carousel menampilkan maksimal 10 terbaru.
+- [ ] Room Donasi filter periode bekerja.
+- [ ] Payment Waiting -> PAID berubah otomatis tanpa perlu klik manual bila webhook/status sudah berubah.
+- [ ] Ganti Metode aman dan menghasilkan Payment Attempt baru.
+- [ ] Cetak Struk hanya muncul saat PAID.
+- [ ] DOKU payment smoke test tidak regresi.

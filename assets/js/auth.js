@@ -168,7 +168,7 @@ window.KiaAuth = {
     try{
       await Promise.race([
         this.warmup(),
-        new Promise(resolve=>setTimeout(resolve,800))
+        new Promise(resolve=>setTimeout(resolve,1200))
       ]);
     }catch(_){ }
     return this.request('/api/auth/login',{
@@ -250,3 +250,12 @@ window.KiaAuth = {
 
 window.KiaAuth.migrateLegacySession();
 window.KiaAuth.getDeviceId();
+
+
+// v0.5.8 — human-friendly platform badge labels without changing role codes.
+(()=>{
+  const roleLabel=v=>({USER:'User',PLATFORM_ADMIN:'Moderator',SUPER_ADMIN:'Super Admin'}[String(v||'').trim().toUpperCase()]||v);
+  const apply=()=>document.querySelectorAll('[data-role-badge]').forEach(el=>{const next=roleLabel(el.textContent);if(next&&el.textContent!==next)el.textContent=next});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});else apply();
+  const obs=new MutationObserver(apply);obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+})();

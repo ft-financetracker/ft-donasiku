@@ -1,8 +1,8 @@
 {
-  "version": "0.5.7",
-  "build": 57,
-  "released_at": "2026-09-16",
+  "version": "0.5.8",
+  "build": 58,
+  "released_at": "2026-09-17",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Social reliability, account-only donor interactions, corrected donor badges, two-line program summary feed, and faster login/session handling"
+  "summary": "Payment UX polish, instant donor social interactions, public donation room, corrected role badges, auto payment status refresh, receipt printing, and changelog fixes"
 }
