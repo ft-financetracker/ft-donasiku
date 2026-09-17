@@ -395,7 +395,16 @@ async function reconcilePendingPayments(){
 }
 
 const publicResponseCache=new Map();
+const socialResponseCache=new Map();
 function clearPublicResponseCache(){publicResponseCache.clear()}
+function socialCacheKey(donationId,userId=''){return `${donationId}:${userId||'guest'}`}
+function getSocialCache(donationId,userId=''){
+  const key=socialCacheKey(donationId,userId),x=socialResponseCache.get(key);
+  if(!x||Date.now()-x.savedAt>30000){if(x)socialResponseCache.delete(key);return null}
+  return x.data;
+}
+function putSocialCache(donationId,userId,data){socialResponseCache.set(socialCacheKey(donationId,userId),{data,savedAt:Date.now()});}
+function dropSocialCache(donationId){for(const key of socialResponseCache.keys())if(key.startsWith(`${donationId}:`))socialResponseCache.delete(key)}
 async function publicCached(key,loader,{freshMs=45000,staleMs=5*60*1000}={}){
   const now=Date.now();const item=publicResponseCache.get(key);
   if(item&&now-item.savedAt<freshMs) return item.data;
@@ -466,7 +475,7 @@ function isGatewayRetryable(err){
 
 async function gas(action,payload={},opts={}){
   if(!GAS_URL||!GATEWAY_SECRET) throw gatewayError('BACKEND_NOT_CONFIGURED',503);
-  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','publicProgramDonationsFast','publicDonationSocialFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
+  const readActions=new Set(['findOne','listWhere','resolveSession','dashboardBootstrapFast','reviewAdminFast','heroAdminFast','publicBootstrapFast','publicProgramsFast','publicProgramFast','publicProgramDonationsFast','publicDonationSocialFast','publicDonationSocialV058Fast','publicDonationRoomFast','adminUsersFast','faqPublicFast','faqAdminFast','siteSettingsPublicFast','publicHelpFast','programUpdatesFast','publicPaymentStatusFast','donorImpactFast']);
   const isRead=readActions.has(action);
   const attempts=Number.isFinite(Number(opts.attempts))
     ? Math.max(1, Number(opts.attempts))
@@ -550,7 +559,7 @@ async function lookupAuthUser(email){
   if(cached&&cached.expires>Date.now()) return cached.user;
   if(cached) authUserCache.delete(key);
 
-  // v0.5.7: targeted lookup lebih cepat daripada warm seluruh tabel USERS.
+  // v0.5.8: targeted lookup lebih cepat daripada warm seluruh tabel USERS.
   // Ini juga menghindari request warm cache yang bersaing dengan login pertama.
   const user=await gas('findOne',{
     sheet:'01_USERS',
@@ -582,7 +591,7 @@ async function saveSession(req,user){
     revoked_at:''
   };
 
-  // v0.5.7: session WAJIB persisted sebelum browser menerima token.
+  // v0.5.8: session WAJIB persisted sebelum browser menerima token.
   // Apps Script action sudah dipangkas menjadi satu upsert session saja,
   // sehingga tidak ada race "login berhasil tetapi dashboard belum mengenal sesi".
   const result=await gas('authLoginCommitFast',{
@@ -633,12 +642,17 @@ async function sessionUser(req){
 }
 
 app.get('/health',async(req,res)=>{
-  // ?warm=1 hanya membangunkan runtime; tidak lagi memicu full USERS scan.
+  // ?warm=1 membangunkan Render + satu read Apps Script ringan di background.
+  // Tidak melakukan scan USERS, sehingga login pertama punya peluang lebih besar
+  // bertemu gateway yang sudah warm tanpa membebani auth path.
+  if(String(req.query.warm||'')==='1'){
+    gas('siteSettingsPublicFast',{}, {timeout:9000,attempts:1}).catch(()=>{});
+  }
   res.json({
     success:true,
     data:{
       app:'KIA Backend',
-      version:'0.5.7',
+      version:'0.5.8',
       auth_cache_entries:authUserCache.size,
       doku_env:DOKU_ENV
     }
@@ -1300,39 +1314,52 @@ app.get('/api/public/programs/:id',async(req,res)=>{
 app.get('/api/public/donations/:id/social',async(req,res)=>{
   try{
     const donationId=text(req.params.id,180);
-    const token_hash=requestTokenHash(req);
-    const data=await gas('publicDonationSocialFast',{
-      donation_id:donationId,
-      viewer_token_hash:token_hash||''
-    },{timeout:14000,attempts:2});
-    res.json({success:true,data});
+    const viewer=await sessionUser(req).catch(()=>null);
+    const viewerId=viewer?.user_id||'';
+    const cached=getSocialCache(donationId,viewerId);
+    if(cached) return res.json({success:true,data:cached,cache:'HIT'});
+    const data=await gas('publicDonationSocialV058Fast',{
+      donation_id:donationId,viewer_user_id:viewerId,viewer_display_name:viewer?.full_name||''
+    },{timeout:9500,attempts:1});
+    putSocialCache(donationId,viewerId,data);
+    res.json({success:true,data,cache:'MISS'});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/social/donations/:id/love',async(req,res)=>{
   try{
-    const token_hash=requestTokenHash(req);
-    if(!token_hash) return res.status(401).json({success:false,code:'UNAUTHORIZED',message:'Masuk ke akun KIA untuk memberi love.'});
+    const viewer=await requireUser(req);
     const donationId=text(req.params.id,180);
-    if(!allowSocialWrite(`love:${token_hash.slice(0,16)}:${donationId}`,700)) return res.status(429).json({success:false,message:'Terlalu cepat. Coba lagi sebentar.'});
-    const data=await gas('socialToggleLoveFast',{token_hash,donation_id:donationId},{timeout:14000,attempts:1});
-    clearPublicResponseCache();
+    if(!allowSocialWrite(`love:${viewer.user_id}:${donationId}`,500)) return res.status(429).json({success:false,message:'Terlalu cepat. Coba lagi sebentar.'});
+    const data=await gas('socialToggleLoveV058Fast',{donation_id:donationId,user_id:viewer.user_id,display_name:viewer.full_name||'Pengguna KIA'},{timeout:8500,attempts:1});
+    dropSocialCache(donationId);clearPublicResponseCache();
     res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
 app.post('/api/social/donations/:id/messages',async(req,res)=>{
   try{
-    const token_hash=requestTokenHash(req);
-    if(!token_hash) return res.status(401).json({success:false,code:'UNAUTHORIZED',message:'Masuk ke akun KIA untuk mengirim doa atau pesan.'});
+    const viewer=await requireUser(req);
     const donationId=text(req.params.id,180);
     const message=text(req.body?.message,280);
     if(!message) return res.status(400).json({success:false,message:'Tulis doa atau pesan terlebih dahulu.'});
-    if(!allowSocialWrite(`msg:${token_hash.slice(0,16)}:${donationId}`,5000)) return res.status(429).json({success:false,message:'Pesan baru dapat dikirim lagi beberapa detik lagi.'});
+    if(!allowSocialWrite(`msg:${viewer.user_id}:${donationId}`,2500)) return res.status(429).json({success:false,message:'Pesan baru dapat dikirim lagi beberapa detik lagi.'});
     const message_id=text(req.body?.message_id,120)||id('msg');
-    const data=await gas('socialCreateMessageFast',{token_hash,donation_id:donationId,message,message_id},{timeout:14000,attempts:1});
-    clearPublicResponseCache();
+    const data=await gas('socialCreateMessageV058Fast',{donation_id:donationId,user_id:viewer.user_id,display_name:viewer.full_name||'Pengguna KIA',message,message_id},{timeout:8500,attempts:1});
+    dropSocialCache(donationId);clearPublicResponseCache();
     res.status(201).json({success:true,data});
+  }catch(e){sendError(res,e)}
+});
+
+app.get('/api/public/donations-feed',async(req,res)=>{
+  try{
+    const page=Math.max(1,Number(req.query.page)||1);
+    const limit=Math.max(5,Math.min(30,Number(req.query.limit)||20));
+    const period=text(req.query.period,20).toUpperCase()||'MONTH';
+    const program_id=text(req.query.program_id,180);
+    const key=`donation-room:${page}:${limit}:${period}:${program_id}`;
+    const data=await publicCached(key,()=>gas('publicDonationRoomFast',{page,limit,period,program_id},{timeout:12000,attempts:1}),{freshMs:30000,staleMs:5*60*1000});
+    res.json({success:true,data});
   }catch(e){sendError(res,e)}
 });
 
@@ -1689,7 +1716,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.7'
+          version:'0.5.8'
         }
       }
     });
