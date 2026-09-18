@@ -1,8 +1,8 @@
 {
-  "version": "0.5.9",
-  "build": 59,
+  "version": "0.5.10",
+  "build": 510,
   "released_at": "2026-09-18",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Instant social timeline sync, resilient Love/Doa background persistence, Dana Lebih allocation preview, and 100% completed program stamps without changing the existing design foundation"
+  "summary": "Public Room Donasi upgrade, compact responsive hero system, continuous Live Donation ticker, program Dana Lebih transparency, completion readability, and donor impact guidance"
 }
