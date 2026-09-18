@@ -63,45 +63,50 @@
 })();
 
 
-/* KIA v0.5.10 Build 512 — landing polish / LIVE state / supporter strip */
+/* KIA v0.5.10 Build 513 — stable landing enhancements */
 (()=>{
   const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  function enhanceHelp(){
+  function help(){
     const sec=$$('.section-block').find(x=>x.querySelector('h2')?.textContent.trim()==='Pusat Bantuan & Kepercayaan');
-    if(!sec||sec.dataset.phaseC)return;sec.dataset.phaseC='1';sec.classList.add('help-pro-v0512');
+    if(!sec||sec.dataset.v0513)return;sec.dataset.v0513='1';sec.classList.add('help-pro-v0513');
     const grid=sec.querySelector('.trust-grid');
     if(grid)grid.innerHTML=`
-      <a class="card trust-card" href="./help.html#payment"><span class="material-symbols-outlined">payments</span><h3>Pembayaran & Status</h3><p class="muted">Donasi pending, payment attempt, ganti metode, dan status PAID.</p></a>
-      <a class="card trust-card" href="./help.html#security"><span class="material-symbols-outlined">shield_lock</span><h3>Keamanan Akun</h3><p class="muted">Password, session perangkat, privasi, dan perlindungan identitas.</p></a>
-      <a class="card trust-card" href="./help.html#account"><span class="material-symbols-outlined">verified_user</span><h3>Akun & Verifikasi</h3><p class="muted">Profil, verifikasi penggalang, serta persiapan sebelum mengajukan program.</p></a>
-      <a class="card trust-card" href="./help.html#donation"><span class="material-symbols-outlined">monitoring</span><h3>Transparansi Donasi</h3><p class="muted">Bagaimana KIA mencatat donasi PAID, Dana Lebih, dan perkembangan program.</p></a>`;
+      <a class="card trust-card" href="./help.html#payment"><span class="material-symbols-outlined">payments</span><h3>Pembayaran</h3><p class="muted">Status pending, metode pembayaran, dan transaksi PAID.</p></a>
+      <a class="card trust-card" href="./help.html#security"><span class="material-symbols-outlined">shield_lock</span><h3>Keamanan Akun</h3><p class="muted">Password, session perangkat, privasi, dan perlindungan akun.</p></a>
+      <a class="card trust-card" href="./help.html#account"><span class="material-symbols-outlined">verified_user</span><h3>Akun & Verifikasi</h3><p class="muted">Profil, verifikasi penggalang, dan kesiapan mengajukan program.</p></a>
+      <a class="card trust-card" href="./help.html#donation"><span class="material-symbols-outlined">monitoring</span><h3>Transparansi</h3><p class="muted">Donasi PAID, Dana Lebih, dan perkembangan program.</p></a>`;
     const faq=sec.querySelector('[data-faq-preview]');
-    if(faq&&!sec.querySelector('.help-quick-v0512'))faq.insertAdjacentHTML('beforebegin',`<div class="help-quick-v0512"><a href="./help.html#payment"><span class="material-symbols-outlined">hourglass_top</span>Donasi saya masih pending</a><a href="./help.html#account"><span class="material-symbols-outlined">how_to_reg</span>Cara verifikasi penggalang</a><a href="./help.html#contact"><span class="material-symbols-outlined">support_agent</span>Butuh bantuan langsung</a></div>`);
+    if(faq&&!sec.querySelector('.help-quick-v0513'))faq.insertAdjacentHTML('beforebegin',`<div class="help-quick-v0513">
+      <a href="./help.html#payment"><span class="material-symbols-outlined">hourglass_top</span>Donasi masih pending</a>
+      <a href="./help.html#account"><span class="material-symbols-outlined">how_to_reg</span>Cara verifikasi penggalang</a>
+      <a href="./help.html#contact"><span class="material-symbols-outlined">support_agent</span>Hubungi bantuan KIA</a>
+    </div>`);
   }
 
-  function liveBadge(){
-    const sec=$('#live-donation');if(!sec)return null;
-    const h2=sec.querySelector('h2');if(!h2)return null;
-    let wrap=sec.querySelector('.live-title-row-v0512');
-    if(!wrap){wrap=document.createElement('div');wrap.className='live-title-row-v0512';h2.parentNode.insertBefore(wrap,h2);wrap.appendChild(h2);wrap.insertAdjacentHTML('beforeend','<span class="live-state-v0512" data-live-state><i></i><b>LIVE</b></span>')}
-    return sec.querySelector('[data-live-state]');
+  function live(){
+    const sec=$('#live-donation'),h2=sec?.querySelector('h2');if(!sec||!h2)return null;
+    let wrap=sec.querySelector('.live-title-row-v0513');
+    if(!wrap){wrap=document.createElement('div');wrap.className='live-title-row-v0513';h2.parentNode.insertBefore(wrap,h2);wrap.appendChild(h2);wrap.insertAdjacentHTML('beforeend','<span class="live-state-v0513" data-live-state-v0513><i></i><b>LIVE</b></span>')}
+    return sec.querySelector('[data-live-state-v0513]');
   }
-  function setLive(state){const el=liveBadge();if(!el)return;el.classList.remove('is-offline','is-maintenance');if(state==='OFFLINE')el.classList.add('is-offline');if(state==='MAINTENANCE')el.classList.add('is-maintenance');el.querySelector('b').textContent=state}
+  function liveState(state){const el=live();if(!el)return;el.classList.remove('is-offline','is-maintenance');if(state==='OFFLINE')el.classList.add('is-offline');if(state==='MAINTENANCE')el.classList.add('is-maintenance');el.querySelector('b').textContent=state}
   async function health(){
-    if(!navigator.onLine){setLive('OFFLINE');return}
-    try{const c=new AbortController(),t=setTimeout(()=>c.abort(),5500);const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/health?live=${Date.now()}`,{cache:'no-store',signal:c.signal});clearTimeout(t);setLive(r.ok?'LIVE':'MAINTENANCE')}catch{setLive(navigator.onLine?'MAINTENANCE':'OFFLINE')}
+    if(!navigator.onLine){liveState('OFFLINE');return}
+    try{const c=new AbortController(),t=setTimeout(()=>c.abort(),4500);const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/health?b=513`,{cache:'no-store',signal:c.signal});clearTimeout(t);liveState(r.ok?'LIVE':'MAINTENANCE')}catch{liveState(navigator.onLine?'MAINTENANCE':'OFFLINE')}
   }
 
   async function supporters(){
-    const footer=$('.public-footer .container');if(!footer||footer.querySelector('.footer-supporters-v0512'))return;
+    const footer=$('.public-footer .container');if(!footer||footer.querySelector('.footer-supporters-v0513'))return;
     let items=[];
-    try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/settings`,{cache:'default'}),j=await r.json();if(r.ok&&j.success){const raw=j.data?.supporter_logos_json||'';if(raw)items=JSON.parse(raw)}}catch(_){}
+    try{const r=await fetch(`${KIA_CONFIG.BACKEND_URL}/api/public/settings`,{cache:'default'}),j=await r.json();if(r.ok&&j.success&&j.data?.supporter_logos_json)items=JSON.parse(j.data.supporter_logos_json)}catch(_){}
     if(!Array.isArray(items)||!items.length)items=[{name:'KIA',image_url:'./icons/kia-symbol-v030.png',link:''},{name:'Finance Tracker',image_url:'',link:''}];
-    const row=document.createElement('div');row.className='footer-supporters-v0512';row.innerHTML=`<div class="footer-supporters-head-v0512"><span>Didukung / Supporter / Partner</span></div><div class="footer-supporters-list-v0512">${items.map(x=>{const inner=x.image_url?`<img src="${esc(x.image_url)}" alt="${esc(x.name||'Supporter')}">`:esc(x.name||'Supporter');return x.link?`<a class="footer-supporter-v0512" href="${esc(x.link)}" target="_blank" rel="noopener">${inner}</a>`:`<span class="footer-supporter-v0512">${inner}</span>`}).join('')}</div>`;footer.appendChild(row);
+    const row=items.slice(0,8).map(x=>{const inner=x.image_url?`<img src="${esc(x.image_url)}" alt="${esc(x.name||'Partner')}">`:`<span>${esc(x.name||'Partner')}</span>`;return x.link?`<a class="footer-supporter-v0513" href="${esc(x.link)}" target="_blank" rel="noopener">${inner}</a>`:`<div class="footer-supporter-v0513">${inner}</div>`}).join('');
+    footer.insertAdjacentHTML('beforeend',`<div class="footer-supporters-v0513"><strong>DIDUKUNG / SUPPORTER / PARTNER</strong><div class="footer-supporter-row-v0513">${row}</div></div>`);
   }
 
-  function init(){enhanceHelp();liveBadge();health();supporters();window.addEventListener('online',health);window.addEventListener('offline',health);setInterval(health,30000)}
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(init,70));
+  document.addEventListener('DOMContentLoaded',()=>{help();live();supporters();health();setInterval(health,60000)});
+  window.addEventListener('online',()=>health());
+  window.addEventListener('offline',()=>liveState('OFFLINE'));
 })();

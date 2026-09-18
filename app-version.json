@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 512,
-  "released_at": "2026-09-18",
+  "build": 513,
+  "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Phase C stabilization: payment UX rollback with faster async channel preparation, dashboard/account consolidation, EXP and mission gamification, profile avatar, program draft controls, landing spacing/live/help/footer polish, and merged progress transparency"
+  "summary": "Stability Recovery: payment UI restored, draft deletion confirmed, strict admin visibility, unified account verification, validated avatar upload, Phase-A landing composition restored, proportional stats and compact footer"
 }

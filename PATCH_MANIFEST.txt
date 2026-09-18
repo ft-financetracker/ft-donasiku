@@ -1,24 +1,23 @@
-KIA v0.5.10 BUILD 512 — PHASE C FULL REPLACEMENT
+KIA v0.5.10 BUILD 513 — STABILITY RECOVERY
 
-FRONTEND REPLACE
+REPLACE
 assets/css/v0510-patch.css
+assets/css/v0510b-patch.css
 assets/js/public-v0510.js
-assets/js/program-v0510.js
 assets/js/donor-impact-v051.js
 payment.html
 app-version.json
 changelog.json
 service-worker.js
-
-FRONTEND NEW
-assets/js/payment-phase-c-v0512.js
-
-SERVER — TIMPA 3 FILE LANGSUNG
 server/server.js
 server/package.json
 server/README.md
 
+NEW
+assets/js/payment-receipt-v0513.js
+
 NO CHANGE
 Apps Script
 Spreadsheet schema
-DOKU ENV / credential
+DOKU ENV
+credentials
