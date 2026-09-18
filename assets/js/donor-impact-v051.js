@@ -1,211 +1,94 @@
 (()=>{
-  const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]));
-  const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
-  let impactLoaded=false,impactLoading=false,pendingLoaded=false,profileLoaded=false;
+'use strict';
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const idr=v=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v)||0);
+let impactLoaded=false,impactLoading=false,pendingLoaded=false,profileLoaded=false,lastBadges=[];
+const uid=()=>KiaAuth.getUser?.()?.user_id||'guest';
+const badgeStore=()=>`kia_display_badge_v0512_${uid()}`;
 
-  const badgeInfo={
-    LANGKAH_PERTAMA:'Donasi pertama tervalidasi.',
-    SAHABAT_PROGRAM:'Mendukung sedikitnya 3 program.',
-    KONSISTEN_3_BULAN:'Aktif berbagi pada 3 bulan berbeda.',
-    KONSISTEN_6_BULAN:'Aktif berbagi pada 6 bulan berbeda.',
-    LINTAS_PROGRAM:'Mendukung sedikitnya 5 program.',
-    PROGRAM_TUNTAS:'Pernah mendukung program yang telah selesai.'
-  };
+const LEVELS=[
+  {label:'Teman KIA',xp:0},{label:'Sahabat KIA',xp:100},{label:'Penggerak Kebaikan',xp:250},
+  {label:'Penjaga Konsistensi',xp:500},{label:'Jejak Kebaikan',xp:900},{label:'Inspirator KIA',xp:1400}
+];
+const MISSIONS=[
+  {code:'LANGKAH_PERTAMA',label:'Langkah Pertama',metric:'paid_donation_count',target:1,unit:'donasi PAID'},
+  {code:'SAHABAT_PROGRAM',label:'Sahabat Program',metric:'programs_supported',target:3,unit:'program berbeda'},
+  {code:'KONSISTEN_3_BULAN',label:'Konsisten 3 Bulan',metric:'active_months',target:3,unit:'bulan aktif'},
+  {code:'KONSISTEN_6_BULAN',label:'Konsisten 6 Bulan',metric:'active_months',target:6,unit:'bulan aktif'},
+  {code:'LINTAS_PROGRAM',label:'Lintas Program',metric:'programs_supported',target:5,unit:'program berbeda'},
+  {code:'PROGRAM_TUNTAS',label:'Program Tuntas',metric:'completed_programs',target:1,unit:'program tuntas'}
+];
+function xpOf(m){return (Number(m.paid_donation_count)||0)*20+(Number(m.programs_supported)||0)*30+(Number(m.active_months)||0)*25+(Number(m.completed_programs)||0)*60}
+function levelOf(xp){let cur=LEVELS[0];for(const l of LEVELS)if(xp>=l.xp)cur=l;const i=LEVELS.indexOf(cur);return{cur,next:LEVELS[i+1]||null}}
 
-  function injectStyle(){
-    if(document.getElementById('kia-v0510b-dashboard-style'))return;
-    const s=document.createElement('style');s.id='kia-v0510b-dashboard-style';
-    s.textContent=`
-      .admin-only[hidden],[data-admin-nav][hidden]{display:none!important}
-      .impact-badge-guide-btn-v0510{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--primary);font:inherit;font-size:10px;font-weight:800;cursor:pointer}
-      .impact-badge-guide-btn-v0510 .material-symbols-outlined{font-size:15px}
-      .impact-badge-guide-v0510{margin:0 0 12px;padding:13px;border:1px solid #dce8e3;border-radius:14px;background:#f8fbf9}
-      .impact-badge-guide-v0510[hidden]{display:none!important}
-      .impact-badge-guide-v0510 h4{margin:0 0 6px;font-size:12px}
-      .impact-badge-guide-v0510 p{margin:0 0 10px;color:var(--muted);font-size:10px;line-height:1.5}
-      .badge-rule-grid-v0510{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-      .badge-rule-v0510{padding:9px 10px;border:1px solid var(--border);border-radius:11px;background:#fff}
-      .badge-rule-v0510 strong,.badge-rule-v0510 small{display:block}.badge-rule-v0510 strong{font-size:10px}.badge-rule-v0510 small{margin-top:2px;color:var(--muted);font-size:9px;line-height:1.4}
-      .impact-level-note-v0510{margin-top:9px;padding:9px 10px;border-radius:11px;background:#edf6f2;color:#315b4d;font-size:9px;line-height:1.5}
-      .pending-card-v0510{padding:18px}
-      .pending-head-v0510{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:11px}
-      .pending-head-v0510 h3{margin:0}.pending-head-v0510 p{margin:4px 0 0;font-size:10px}
-      .pending-list-v0510{display:grid;gap:8px}
-      .pending-item-v0510{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--border);border-radius:13px;background:#fff}
-      .pending-item-v0510 strong,.pending-item-v0510 span,.pending-item-v0510 small{display:block}
-      .pending-item-v0510 .pending-title-v0510{font-size:11px}
-      .pending-item-v0510 .pending-meta-v0510{margin-top:3px;color:var(--muted);font-size:9px}
-      .pending-item-v0510 .pending-amount-v0510{text-align:right;color:var(--primary);font-family:var(--font-number);font-weight:850}
-      .pending-item-v0510 .pending-actions-v0510{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
-      .pending-empty-v0510{padding:16px;text-align:center;color:var(--muted);font-size:10px}
-      .profile-editor-v0510{margin-top:14px;padding-top:17px;border-top:1px solid var(--border)}
-      .profile-editor-v0510 h3{margin:0 0 5px}.profile-editor-v0510>p{margin:0 0 13px;font-size:10px}
-      .profile-grid-v0510{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-      .profile-grid-v0510 .full{grid-column:1/-1}
-      .profile-field-v0510{display:grid;gap:6px;font-size:11px;font-weight:750}
-      .profile-field-v0510 input,.profile-field-v0510 textarea{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--border);border-radius:11px;background:#fff;font:inherit}
-      .profile-field-v0510 textarea{min-height:82px;resize:vertical}
-      .profile-field-v0510 input[readonly]{background:#f5f7f6;color:var(--muted)}
-      .profile-actions-v0510{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
-      .profile-status-v0510{font-size:10px;color:var(--muted)}
-      @media(max-width:820px){
-        .badge-rule-grid-v0510{grid-template-columns:1fr}
-        .pending-item-v0510{grid-template-columns:1fr}
-        .pending-item-v0510 .pending-amount-v0510{text-align:left}
-        .pending-item-v0510 .pending-actions-v0510{justify-content:flex-start}
-        .profile-grid-v0510{grid-template-columns:1fr}.profile-grid-v0510 .full{grid-column:auto}
-      }`;
-    document.head.appendChild(s);
-  }
+function injectStyle(){if($('#kia-phase-c-style'))return;const s=document.createElement('style');s.id='kia-phase-c-style';s.textContent=`
+body>header{background:#fff;border-bottom:1px solid rgba(20,62,48,.10);box-shadow:0 5px 20px rgba(20,62,48,.045)}
+[data-dashboard-route="verification"]{display:none!important}
+.app-hero{border:1px solid rgba(25,70,53,.08);border-radius:16px;padding:20px 18px;background:linear-gradient(180deg,#fff,#fbfdfc);box-shadow:0 10px 30px rgba(27,61,49,.045)}
+.impact-level{min-width:210px!important}.impact-level strong{font-size:18px}.impact-xp-v0512{margin-top:7px}.impact-xp-line-v0512{display:flex;justify-content:space-between;gap:10px;font-size:9px;color:#dcece6}.impact-xp-bar-v0512{height:7px;margin-top:6px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden}.impact-xp-bar-v0512 i{display:block;height:100%;background:#ebc970;border-radius:inherit}.impact-xp-next-v0512{margin-top:5px;font-size:9px;color:#dcece6}
+.badge-guide-btn-v0512{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--primary);font:inherit;font-size:10px;font-weight:850;cursor:pointer}.badge-guide-btn-v0512 .material-symbols-outlined{font-size:15px}.badge-guide-v0512{margin:0 0 12px;padding:14px;border:1px solid #dce8e3;border-radius:14px;background:#f8fbf9}.badge-guide-v0512[hidden]{display:none!important}.badge-guide-v0512 h4{margin:0 0 7px}.badge-level-list-v0512,.mission-grid-v0512{display:grid;gap:7px}.badge-level-list-v0512{grid-template-columns:repeat(3,1fr);margin-bottom:13px}.level-chip-v0512,.mission-v0512{padding:9px 10px;border:1px solid var(--border);border-radius:11px;background:#fff}.level-chip-v0512.is-current{border-color:#8cc8b4;background:#eef8f4}.level-chip-v0512 strong,.level-chip-v0512 small,.mission-v0512 strong,.mission-v0512 small{display:block}.level-chip-v0512 small,.mission-v0512 small{margin-top:3px;color:var(--muted);font-size:9px}.mission-grid-v0512{grid-template-columns:1fr 1fr}.mission-head-v0512{display:flex;justify-content:space-between;gap:8px;align-items:center}.mission-progress-v0512{height:5px;margin-top:7px;border-radius:999px;background:#edf1ef;overflow:hidden}.mission-progress-v0512 i{display:block;height:100%;background:var(--primary)}
+.impact-recent-list{max-height:365px;overflow-y:auto;padding-right:4px}.impact-recent-list::-webkit-scrollbar{width:5px}.impact-recent-list::-webkit-scrollbar-thumb{background:#cddbd5;border-radius:999px}
+.pending-card-v0512{padding:16px!important}.pending-head-v0512{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.pending-head-v0512 h3{margin:0}.pending-head-v0512 p{margin:3px 0 0;font-size:9px}.pending-list-v0512{display:grid;gap:7px;max-height:290px;overflow-y:auto}.pending-item-v0512{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}.pending-item-v0512 h4{margin:0;font-size:11px}.pending-meta-v0512{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.pending-amount-v0512{text-align:right}.pending-amount-v0512 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:18px}.pending-amount-v0512 small{color:var(--muted);font-size:8px}.pending-item-v0512 .btn{min-height:35px;padding:0 10px;font-size:10px;width:100%}
+.account-overview-v0512{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}.avatar-card-v0512{display:grid;justify-items:center;gap:9px;padding:16px;border:1px solid var(--border);border-radius:15px;background:#f8fbf9}.avatar-v0512{width:112px;height:112px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 20px rgba(29,67,53,.12);display:grid;place-items:center;background:#e7f2ee;color:var(--primary);font-size:30px;font-weight:900}.avatar-v0512 img{width:100%;height:100%;object-fit:cover}.avatar-card-v0512 label{cursor:pointer}.account-verify-card-v0512{margin-top:14px!important}.account-profile-form-v0512{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}.account-profile-form-v0512 .form-grid{margin-top:10px}.account-badges-v0512{margin-top:14px;padding:15px;border:1px solid var(--border);border-radius:14px;background:#fbfdfc}.account-badges-list-v0512{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.account-badge-choice-v0512{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:9px;font-weight:800;cursor:pointer}.account-badge-choice-v0512.is-selected{border-color:#72b59d;background:#eaf7f2;color:var(--primary)}
+.program-delete-v0512{border-color:#efc9c5!important;color:#9a443e!important}.program-actions [data-program-status="PAUSE"]{border-color:#e6d7af}.program-actions [data-program-status="RESUME"]{background:#edf8f3}
+.supporter-admin-list-v0512{display:grid;gap:8px;margin-top:12px}.supporter-admin-row-v0512{display:grid;grid-template-columns:1fr 1.5fr 1.5fr auto;gap:8px;align-items:center}.supporter-admin-row-v0512 input{min-height:40px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font:inherit}.supporter-admin-row-v0512 button{min-height:40px}
+@media(max-width:820px){.badge-level-list-v0512{grid-template-columns:1fr 1fr}.mission-grid-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr auto}.pending-amount-v0512{grid-column:2;grid-row:1;text-align:right}.pending-item-v0512 .btn{grid-column:1/-1;width:auto;justify-self:start}.account-overview-v0512{grid-template-columns:1fr}.avatar-card-v0512{grid-template-columns:auto 1fr;justify-items:start;align-items:center}.avatar-v0512{width:86px;height:86px}.supporter-admin-row-v0512{grid-template-columns:1fr 1fr}.supporter-admin-row-v0512 button{grid-column:1/-1;justify-self:start}}
+@media(max-width:540px){.badge-level-list-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr}.pending-amount-v0512{grid-column:auto;grid-row:auto;text-align:left}.app-hero{padding:15px 12px}.impact-level{min-width:0!important;width:100%}.avatar-card-v0512{grid-template-columns:1fr;justify-items:center}.supporter-admin-row-v0512{grid-template-columns:1fr}}
+`;document.head.appendChild(s)}
 
-  function badgeGuide(){
-    const impact=$('[data-impact-root]');if(!impact)return;
-    const card=[...impact.querySelectorAll('.impact-columns .section-card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Badge Saya');
-    if(!card||card.querySelector('[data-badge-guide]'))return;
-    const head=card.querySelector('.section-head');
-    const btn=document.createElement('button');btn.type='button';btn.className='impact-badge-guide-btn-v0510';btn.dataset.badgeGuideToggle='1';
-    btn.innerHTML='<span class="material-symbols-outlined">info</span> Tingkatan Badge';
-    head?.appendChild(btn);
-    const guide=document.createElement('div');guide.className='impact-badge-guide-v0510';guide.dataset.badgeGuide='1';guide.hidden=true;
-    guide.innerHTML=`<h4>Cara Badge & Level bekerja</h4>
-      <p>Badge menghargai jejak aktivitas yang tervalidasi, bukan besarnya nominal. Badge dapat terbuka ketika syarat aktivitasnya terpenuhi dan tidak harus dibaca sebagai ranking kekayaan.</p>
-      <div class="badge-rule-grid-v0510">
-        <div class="badge-rule-v0510"><strong>Langkah Pertama</strong><small>Donasi pertama berstatus PAID.</small></div>
-        <div class="badge-rule-v0510"><strong>Sahabat Program</strong><small>Aktif mendukung lebih dari satu program.</small></div>
-        <div class="badge-rule-v0510"><strong>Konsisten 3 Bulan</strong><small>Aktif berbagi pada 3 bulan berbeda.</small></div>
-        <div class="badge-rule-v0510"><strong>Konsisten 6 Bulan</strong><small>Aktif berbagi pada 6 bulan berbeda.</small></div>
-        <div class="badge-rule-v0510"><strong>Lintas Program</strong><small>Jejak dukungan tersebar pada beberapa program.</small></div>
-        <div class="badge-rule-v0510"><strong>Program Tuntas</strong><small>Pernah mendukung program yang telah selesai.</small></div>
-      </div>
-      <div class="impact-level-note-v0510"><strong>Level Aktivitas</strong><br>Level dihitung engine KIA dari jejak aktivitas tervalidasi seperti donasi PAID, ragam program, periode aktif, dan program tuntas. KIA tidak menggunakan leaderboard nominal.</div>`;
-    const badgeRoot=card.querySelector('[data-impact-badges]');card.insertBefore(guide,badgeRoot);
-    btn.onclick=()=>{guide.hidden=!guide.hidden;btn.classList.toggle('is-active',!guide.hidden)};
-  }
+function initials(name){const p=String(name||'KIA').trim().split(/\s+/);return((p[0]?.[0]||'K')+(p[1]?.[0]||'')).toUpperCase()}
+function restructure(){
+  injectStyle();
+  const topVerification=$('[data-dashboard-route="verification"]');if(topVerification)topVerification.hidden=true;
+  const mobile=$('[data-mobile-route="verification"]');if(mobile){mobile.dataset.mobileRoute='impact';mobile.href='#impact';mobile.querySelector('.mobile-nav-icon').textContent='insights';mobile.querySelector('span:last-child').textContent='Dampak'}
+  $$('[data-go="verification"]').forEach(b=>{b.dataset.go='account';b.textContent='Akun & Verifikasi'});
+  if(location.hash==='#verification')history.replaceState(null,'','#account');
 
-  function injectPending(){
-    const impact=$('[data-impact-root]');if(!impact||impact.querySelector('[data-pending-donations]'))return;
-    const metrics=impact.querySelector('.impact-metrics');
-    if(!metrics)return;
-    metrics.insertAdjacentHTML('afterend',`<section class="card pending-card-v0510" data-pending-donations>
-      <div class="pending-head-v0510"><div><h3>Menunggu Pembayaran</h3><p class="muted">Donasi yang sudah dibuat tetapi belum PAID dapat dilanjutkan tanpa membuat Donation baru.</p></div><button class="btn btn-ghost" type="button" data-pending-refresh>Refresh</button></div>
-      <div class="pending-list-v0510" data-pending-list><div class="pending-empty-v0510">Memuat transaksi yang masih dapat dilanjutkan…</div></div>
-    </section>`);
-    $('[data-pending-refresh]',impact)?.addEventListener('click',()=>loadPending(true));
-  }
+  const account=$('[data-section="account"]'),verify=$('[data-section="verification"]');
+  if(account&&!account.dataset.phaseC){account.dataset.phaseC='1';const card=account.querySelector('.section-card'),info=card?.querySelector('.system-info-list');if(card&&info){
+    const wrap=document.createElement('div');wrap.className='account-overview-v0512';info.parentNode.insertBefore(wrap,info);const avatar=document.createElement('div');avatar.className='avatar-card-v0512';avatar.innerHTML=`<div class="avatar-v0512" data-profile-avatar><span>${esc(initials(KiaAuth.getUser()?.full_name))}</span></div><div><strong>Foto Profil</strong><p class="muted mini">JPG/PNG/WEBP. Foto akan dipakai pada profil KIA.</p><label class="btn btn-soft">Ganti Foto<input type="file" accept="image/jpeg,image/png,image/webp" data-avatar-input hidden></label></div>`;wrap.appendChild(avatar);const right=document.createElement('div');right.appendChild(info);const actions=card.querySelector('.form-actions');if(actions)right.appendChild(actions);wrap.appendChild(right);
+    card.insertAdjacentHTML('beforeend',`<div class="account-profile-form-v0512" data-profile-editor><h3>Profil Akun</h3><p class="muted mini">Nama, kontak, dan alamat korespondensi.</p><form data-profile-form><div class="form-grid"><label class="field">Nama<input name="full_name" maxlength="140" required></label><label class="field">WhatsApp / Telepon<input name="phone" maxlength="60"></label><label class="field">Email<input name="email" readonly></label><label class="field">Jenis Akun<input name="account_type" readonly></label><label class="field full">Alamat<textarea name="address" maxlength="600"></textarea></label></div><div class="form-actions"><button class="btn btn-primary" type="submit" data-profile-save>Simpan Profil</button><span class="muted mini" data-profile-status></span></div></form></div><div class="account-badges-v0512" data-account-badges><strong>Lencana Ditampilkan</strong><p class="muted mini">Pilih salah satu lencana yang sudah didapatkan untuk ditonjolkan di perangkat ini.</p><div class="account-badges-list-v0512" data-account-badges-list><span class="muted mini">Muat Dampak Saya untuk melihat lencana.</span></div></div>`);
+    $('[data-profile-form]',card)?.addEventListener('submit',saveProfile);$('[data-avatar-input]',card)?.addEventListener('change',uploadAvatar);
+  }}
+  if(account&&verify&&!verify.dataset.movedToAccount){verify.dataset.movedToAccount='1';const vcard=verify.querySelector('.section-card');if(vcard){vcard.classList.add('account-verify-card-v0512');vcard.querySelector('h2').textContent='Verifikasi Akun / Penggalang';account.appendChild(vcard)}verify.hidden=true}
+  injectSupporterAdmin();observePrograms();loadProfile();
+}
 
-  function statusLabel(v){
-    return ({PENDING:'Menunggu pembayaran',CREATED:'Menyiapkan channel',EXPIRED:'Kedaluwarsa',FAILED:'Percobaan gagal'}[String(v||'').toUpperCase()]||v||'Menunggu');
-  }
-  function pendingButton(x){
-    const token=String(x.view_token||'');
-    if(!token)return '';
-    const href=`./payment.html?token=${encodeURIComponent(token)}&from=impact`;
-    const terminal=['EXPIRED','FAILED'].includes(String(x.payment_status||'').toUpperCase());
-    return `<a class="btn ${terminal?'btn-soft':'btn-primary'}" href="${href}">${terminal?'Buat Pembayaran Baru':'Lanjutkan Pembayaran'}</a>`;
-  }
-  async function loadPending(force=false){
-    if(pendingLoaded&&!force)return;
-    const root=$('[data-pending-list]');if(!root)return;
-    root.innerHTML='<div class="pending-empty-v0510">Memuat transaksi…</div>';
-    try{
-      const r=await KiaAuth.request('/api/donor/pending-payments',{timeout:18000,attempts:1});
-      const rows=r.data?.items||[];
-      root.innerHTML=rows.length?rows.map(x=>`<article class="pending-item-v0510">
-        <div><strong class="pending-title-v0510">${esc(x.program_name||'Program KIA')}</strong><span class="pending-meta-v0510">${esc(x.donation_code||'')} · ${esc(statusLabel(x.payment_status))}${x.expired_at?` · berlaku s.d. ${new Date(x.expired_at).toLocaleString('id-ID')}`:''}</span></div>
-        <div><span class="pending-amount-v0510">${idr(x.gross_amount)}</span><div class="pending-actions-v0510">${pendingButton(x)}</div></div>
-      </article>`).join(''):'<div class="pending-empty-v0510">Tidak ada donasi yang menunggu pembayaran.</div>';
-      pendingLoaded=true;
-    }catch(e){root.innerHTML=`<div class="pending-empty-v0510">${esc(e.message||'Riwayat pembayaran belum dapat dimuat.')}</div>`}
-  }
+function badgeMissionHtml(m){const have=Number(m.metrics?.[m.metric]||0),pct=Math.min(100,Math.round(have/m.target*100));return `<div class="mission-v0512"><div class="mission-head-v0512"><strong>${esc(m.label)}</strong><small>${Math.min(have,m.target)}/${m.target}</small></div><small>${m.target} ${esc(m.unit)}</small><div class="mission-progress-v0512"><i style="width:${pct}%"></i></div></div>`}
+function ensureBadgeGuide(metrics,xp,level){const card=[...$$('[data-impact-root] .impact-columns .section-card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Badge Saya');if(!card)return;let btn=card.querySelector('[data-badge-guide-toggle]');if(!btn){btn=document.createElement('button');btn.className='badge-guide-btn-v0512';btn.type='button';btn.dataset.badgeGuideToggle='1';btn.innerHTML='<span class="material-symbols-outlined">flag</span> Level & Misi';card.querySelector('.section-head')?.appendChild(btn);const guide=document.createElement('div');guide.className='badge-guide-v0512';guide.dataset.badgeGuide='1';guide.hidden=true;card.insertBefore(guide,card.querySelector('[data-impact-badges]'));btn.onclick=()=>guide.hidden=!guide.hidden}
+  const guide=card.querySelector('[data-badge-guide]');guide.innerHTML=`<h4>Tingkatan Level Aktivitas</h4><p class="muted mini">EXP berasal dari aktivitas tervalidasi, bukan besar nominal donasi.</p><div class="badge-level-list-v0512">${LEVELS.map(l=>`<div class="level-chip-v0512 ${l.label===level.cur.label?'is-current':''}"><strong>${esc(l.label)}</strong><small>Mulai ${l.xp} EXP</small></div>`).join('')}</div><h4>Misi Badge</h4><div class="mission-grid-v0512">${MISSIONS.map(m=>badgeMissionHtml({...m,metrics})).join('')}</div>`}
 
-  function injectProfileEditor(){
-    const section=$('[data-section="account"]');if(!section||section.querySelector('[data-profile-editor]'))return;
-    const card=section.querySelector('.section-card');if(!card)return;
-    card.insertAdjacentHTML('beforeend',`<div class="profile-editor-v0510" data-profile-editor>
-      <h3>Profil Akun</h3><p class="muted">Lengkapi data kontak dan alamat akun. Email dan jenis akun tidak diubah dari form ini.</p>
-      <form data-profile-form>
-        <div class="profile-grid-v0510">
-          <label class="profile-field-v0510">Nama<input name="full_name" maxlength="140" required></label>
-          <label class="profile-field-v0510">WhatsApp / Telepon<input name="phone" maxlength="60" inputmode="tel"></label>
-          <label class="profile-field-v0510">Email<input name="email" readonly></label>
-          <label class="profile-field-v0510">Jenis Akun<input name="account_type" readonly></label>
-          <label class="profile-field-v0510 full">Alamat<textarea name="address" maxlength="600" placeholder="Alamat akun / alamat korespondensi"></textarea></label>
-        </div>
-        <div class="profile-actions-v0510"><button class="btn btn-primary" type="submit" data-profile-save>Simpan Profil</button><span class="profile-status-v0510" data-profile-status></span></div>
-      </form>
-    </div>`);
-    $('[data-profile-form]',section)?.addEventListener('submit',saveProfile);
-  }
-  async function loadProfile(force=false){
-    if(profileLoaded&&!force)return;
-    injectProfileEditor();
-    const form=$('[data-profile-form]');if(!form)return;
-    const status=$('[data-profile-status]');status.textContent='Memuat profil…';
-    try{
-      const r=await KiaAuth.request('/api/account/profile',{timeout:14000});
-      const u=r.data?.user||{},p=r.data?.profile||{};
-      form.elements.full_name.value=u.full_name||'';
-      form.elements.phone.value=u.phone||'';
-      form.elements.email.value=u.email||'';
-      form.elements.account_type.value=u.account_type==='ORGANIZATION'?'Yayasan / Organisasi':'Perorangan';
-      form.elements.address.value=p.address||'';
-      status.textContent='Profil tersinkron.';
-      profileLoaded=true;
-    }catch(e){status.textContent=e.message||'Profil belum dapat dimuat.'}
-  }
-  async function saveProfile(e){
-    e.preventDefault();
-    const form=e.currentTarget,btn=form.querySelector('[data-profile-save]'),status=form.querySelector('[data-profile-status]');
-    const payload={full_name:form.elements.full_name.value.trim(),phone:form.elements.phone.value.trim(),address:form.elements.address.value.trim()};
-    if(!payload.full_name){status.textContent='Nama wajib diisi.';return}
-    btn.disabled=true;btn.textContent='Menyimpan…';status.textContent='';
-    try{
-      const r=await KiaAuth.request('/api/account/profile',{method:'POST',body:JSON.stringify(payload),timeout:18000,attempts:1});
-      KiaAuth.setSession({user:r.data?.user||{}});
-      $$('[data-user-name]').forEach(x=>x.textContent=r.data?.user?.full_name||payload.full_name);
-      const name=$('[data-account-name]');if(name)name.textContent=r.data?.user?.full_name||payload.full_name;
-      status.textContent='Profil berhasil diperbarui.';
-    }catch(err){status.textContent=err.message||'Profil gagal disimpan.'}
-    finally{btn.disabled=false;btn.textContent='Simpan Profil'}
-  }
+function renderImpact(data){const m=data.metrics||{},badges=data.badges||[],recent=data.recent||[];lastBadges=badges;const xp=xpOf(m),level=levelOf(xp),start=level.cur.xp,end=level.next?.xp||Math.max(start+1,xp),pct=level.next?Math.min(100,Math.max(0,(xp-start)/(end-start)*100)):100;
+  $('[data-impact-level]').textContent=level.cur.label;$('[data-impact-donations]').textContent=String(m.paid_donation_count||0);$('[data-impact-programs]').textContent=String(m.programs_supported||0);$('[data-impact-months]').textContent=String(m.active_months||0);$('[data-impact-completed]').textContent=String(m.completed_programs||0);
+  const box=$('.impact-level');if(box){let exp=box.querySelector('.impact-xp-v0512');if(!exp){exp=document.createElement('div');exp.className='impact-xp-v0512';box.appendChild(exp)}exp.innerHTML=`<div class="impact-xp-line-v0512"><span>EXP ${xp}</span><span>${level.next?`${level.next.xp} EXP`:'MAX'}</span></div><div class="impact-xp-bar-v0512"><i style="width:${pct}%"></i></div><div class="impact-xp-next-v0512">${level.next?`${Math.max(0,level.next.xp-xp)} EXP lagi menuju ${esc(level.next.label)}`:'Level aktivitas tertinggi saat ini'}</div>`}
+  const br=$('[data-impact-badges]');br.innerHTML=badges.length?badges.map(b=>`<article class="impact-badge"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span><div><strong>${esc(b.label)}</strong><small>${esc(MISSIONS.find(x=>x.code===b.code)?.label?'Misi tercapai':'Lencana aktivitas KIA')}</small></div></article>`).join(''):'<div class="empty-state">Belum ada lencana. Selesaikan misi aktivitas untuk membuka badge.</div>';
+  const rr=$('[data-impact-recent]');rr.innerHTML=recent.length?recent.map(x=>`<a class="impact-recent" href="./program.html?id=${encodeURIComponent(x.program_id||'')}"><div><strong>${esc(x.program_name)}</strong><small>${x.paid_at?new Date(x.paid_at).toLocaleDateString('id-ID'):'—'}</small></div><span>${idr(x.amount)}</span></a>`).join(''):'<div class="empty-state">Belum ada riwayat donasi PAID.</div>';
+  ensureBadgeGuide(m,xp,level);renderAccountBadges();injectPending();loadPending();impactLoaded=true;
+}
+async function loadImpact(force=false){if(impactLoading||impactLoaded&&!force)return;impactLoading=true;try{const r=await KiaAuth.request('/api/donor/impact',{timeout:15000});renderImpact(r.data||{})}catch(e){KiaUI.toast(e.message||'Dampak Saya belum dapat dimuat',{type:'warning'})}finally{impactLoading=false}}
 
-  function renderImpact(data){
-    const level=data.level||{},m=data.metrics||{},badges=data.badges||[],recent=data.recent||[];
-    $('[data-impact-level]').textContent=level.label||'Teman KIA';
-    $('[data-impact-donations]').textContent=String(m.paid_donation_count||0);
-    $('[data-impact-programs]').textContent=String(m.programs_supported||0);
-    $('[data-impact-months]').textContent=String(m.active_months||0);
-    $('[data-impact-completed]').textContent=String(m.completed_programs||0);
+function injectPending(){const root=$('[data-impact-root]');if(!root||root.querySelector('[data-pending-donations]'))return;const metrics=root.querySelector('.impact-metrics');if(!metrics)return;metrics.insertAdjacentHTML('afterend',`<section class="card pending-card-v0512" data-pending-donations><div class="pending-head-v0512"><div><h3>Menunggu Pembayaran</h3><p class="muted">Donation tetap sama; lanjutkan payment attempt yang belum selesai.</p></div><button class="btn btn-ghost" type="button" data-pending-refresh>Refresh</button></div><div class="pending-list-v0512" data-pending-list><div class="empty-state">Memuat transaksi…</div></div></section>`);$('[data-pending-refresh]')?.addEventListener('click',()=>loadPending(true))}
+async function loadPending(force=false){if(pendingLoaded&&!force)return;const root=$('[data-pending-list]');if(!root)return;try{const r=await KiaAuth.request('/api/donor/pending-payments',{timeout:18000,attempts:1}),rows=r.data?.items||[];root.innerHTML=rows.length?rows.map(x=>`<article class="pending-item-v0512"><div><h4>${esc(x.program_name||'Program KIA')}</h4><div class="pending-meta-v0512">${esc(x.donation_code||'')} · ${esc(x.payment_status||'PENDING')}${x.expired_at?` · s.d. ${new Date(x.expired_at).toLocaleString('id-ID')}`:''}</div></div><div class="pending-amount-v0512"><strong>${idr(x.gross_amount)}</strong><small>Nominal donasi</small></div><a class="btn btn-primary" href="./payment.html?token=${encodeURIComponent(x.view_token||'')}&from=impact">Lanjutkan</a></article>`).join(''):'<div class="empty-state">Tidak ada transaksi yang menunggu pembayaran.</div>';pendingLoaded=true}catch(e){root.innerHTML=`<div class="empty-state">${esc(e.message||'Transaksi pending belum dapat dimuat.')}</div>`}}
 
-    const badgeRoot=$('[data-impact-badges]');
-    badgeRoot.innerHTML=badges.length?badges.map(b=>`<article class="impact-badge"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span><div><strong>${esc(b.label)}</strong><small>${esc(badgeInfo[b.code]||'Badge aktivitas KIA')}</small></div></article>`).join(''):'<div class="empty-state">Badge akan muncul ketika syarat aktivitasnya terpenuhi.</div>';
+async function loadProfile(force=false){if(profileLoaded&&!force)return;const form=$('[data-profile-form]');if(!form)return;const st=$('[data-profile-status]');try{const r=await KiaAuth.request('/api/account/profile',{timeout:14000}),u=r.data?.user||{},p=r.data?.profile||{};form.elements.full_name.value=u.full_name||'';form.elements.phone.value=u.phone||'';form.elements.email.value=u.email||'';form.elements.account_type.value=u.account_type==='ORGANIZATION'?'Yayasan / Organisasi':'Perorangan';form.elements.address.value=p.address||'';renderAvatar(p.avatar_url,u.full_name);st.textContent='Profil tersinkron.';profileLoaded=true}catch(e){st.textContent=e.message||'Profil belum dapat dimuat.'}}
+function renderAvatar(url,name){const root=$('[data-profile-avatar]');if(!root)return;root.innerHTML=url?`<img src="${esc(url)}" alt="Foto profil">`:`<span>${esc(initials(name))}</span>`}
+async function saveProfile(e){e.preventDefault();const f=e.currentTarget,b=f.querySelector('[data-profile-save]'),st=f.querySelector('[data-profile-status]');b.disabled=true;b.textContent='Menyimpan…';try{const r=await KiaAuth.request('/api/account/profile',{method:'POST',body:JSON.stringify({full_name:f.elements.full_name.value.trim(),phone:f.elements.phone.value.trim(),address:f.elements.address.value.trim()}),timeout:18000,attempts:1});KiaAuth.setSession({user:r.data.user});$$('[data-user-name]').forEach(x=>x.textContent=r.data.user.full_name);$('[data-account-name]').textContent=r.data.user.full_name;renderAvatar(r.data.profile?.avatar_url,r.data.user.full_name);st.textContent='Profil berhasil diperbarui.'}catch(err){st.textContent=err.message||'Profil gagal disimpan.'}finally{b.disabled=false;b.textContent='Simpan Profil'}}
+async function fileToAvatar(file){const bmp=await createImageBitmap(file),side=Math.min(bmp.width,bmp.height),sx=(bmp.width-side)/2,sy=(bmp.height-side)/2,c=document.createElement('canvas');c.width=600;c.height=600;c.getContext('2d').drawImage(bmp,sx,sy,side,side,0,0,600,600);bmp.close();const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86));return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve({file_name:'avatar.jpg',mime_type:'image/jpeg',base64:String(fr.result).split(',')[1]});fr.onerror=reject;fr.readAsDataURL(blob)})}
+async function uploadAvatar(e){const file=e.target.files?.[0];e.target.value='';if(!file)return;try{KiaUI.showLoading({title:'Mengganti foto profil',message:'Mengoptimalkan foto…'});const payload=await fileToAvatar(file),r=await KiaAuth.request('/api/account/avatar',{method:'POST',body:JSON.stringify(payload),timeout:30000,attempts:1});renderAvatar(r.data?.avatar_url,KiaAuth.getUser()?.full_name);KiaUI.toast('Foto profil diperbarui',{type:'success'})}catch(err){KiaUI.toast(err.message||'Foto profil gagal diubah',{type:'error'})}finally{KiaUI.hideLoading()}}
+function renderAccountBadges(){const root=$('[data-account-badges-list]');if(!root)return;const selected=localStorage.getItem(badgeStore())||'';root.innerHTML=lastBadges.length?lastBadges.map(b=>`<button type="button" class="account-badge-choice-v0512 ${selected===b.code?'is-selected':''}" data-display-badge="${esc(b.code)}"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span>${esc(b.label)}</button>`).join(''):'<span class="muted mini">Belum ada lencana yang dapat dipilih.</span>';$$('[data-display-badge]',root).forEach(b=>b.onclick=()=>{localStorage.setItem(badgeStore(),b.dataset.displayBadge);renderAccountBadges();KiaUI.toast('Lencana tampilan dipilih',{type:'success'})})}
 
-    const recentRoot=$('[data-impact-recent]');
-    recentRoot.innerHTML=recent.length?recent.map(x=>`<a class="impact-recent" href="./program.html?id=${encodeURIComponent(x.program_id||'')}"><div><strong>${esc(x.program_name)}</strong><small>${x.paid_at?new Date(x.paid_at).toLocaleDateString('id-ID'):'—'}</small></div><span>${idr(x.amount)}</span></a>`).join(''):'<div class="empty-state">Belum ada riwayat donasi PAID di akun ini.</div>';
-    badgeGuide();injectPending();loadPending();impactLoaded=true;
-  }
+function enhanceProgramRows(){const root=$('[data-program-list]');if(!root)return;root.querySelectorAll('.program-item').forEach(item=>{const actions=item.querySelector('.program-actions'),edit=actions?.querySelector('[data-program-edit]');if(!actions||!edit)return;const id=edit.dataset.programEdit;if(actions.querySelector('[data-delete-draft]'))return;const submit=actions.querySelector('[data-program-submit]');if(submit){const del=document.createElement('button');del.type='button';del.className='btn btn-ghost program-delete-v0512';del.dataset.deleteDraft=id;del.textContent='Hapus Draft';actions.appendChild(del);del.onclick=()=>deleteDraft(id,item)}const pause=actions.querySelector('[data-program-status="PAUSE"]');if(pause){pause.textContent='Stop Donasi';pause.title='Menutup penerimaan donasi baru. Dana yang sudah masuk tetap tercatat.'}const resume=actions.querySelector('[data-program-status="RESUME"]');if(resume)resume.textContent='Buka Donasi'})}
+async function deleteDraft(id,row){const ok=await KiaUI.confirm({title:'Hapus Draft Program?',message:'Draft akan diarsipkan dan tidak dapat diajukan sebelum dibuat kembali.',confirmText:'Hapus Draft',danger:true});if(!ok)return;try{await KiaAuth.request(`/api/programs/${encodeURIComponent(id)}/delete-draft`,{method:'POST',body:'{}',timeout:16000});row.remove();KiaUI.toast('Draft program dihapus',{type:'success'})}catch(e){KiaUI.toast(e.message||'Draft belum dapat dihapus',{type:'error'})}}
+function observePrograms(){const root=$('[data-program-list]');if(!root||root.dataset.phaseCObserver)return;root.dataset.phaseCObserver='1';new MutationObserver(()=>setTimeout(enhanceProgramRows,20)).observe(root,{childList:true,subtree:true});enhanceProgramRows()}
 
-  async function loadImpact(force=false){
-    if(impactLoading||impactLoaded&&!force)return;impactLoading=true;
-    const root=$('[data-impact-root]');if(!impactLoaded)root?.classList.add('is-loading');
-    try{const r=await KiaAuth.request('/api/donor/impact',{timeout:15000});renderImpact(r.data||{})}
-    catch(e){if(root)root.innerHTML=`<div class="empty-state">${esc(e.message||'Dampak Saya belum dapat dimuat.')} <button class="btn btn-ghost" type="button" data-impact-retry>Coba Lagi</button></div>`;$('[data-impact-retry]')?.addEventListener('click',()=>{impactLoaded=false;loadImpact(true)})}
-    finally{impactLoading=false;root?.classList.remove('is-loading')}
-  }
+function injectSupporterAdmin(){const user=KiaAuth.getUser?.();if(user?.platform_role!=='SUPER_ADMIN')return;const shell=$('[data-settings-view="home"] .settings-shell');if(!shell||$('[data-supporter-settings-entry]'))return;const group=document.createElement('div');group.className='settings-group';group.dataset.supporterSettingsEntry='1';group.innerHTML=`<button class="settings-group__head" type="button"><span class="material-symbols-outlined settings-group__icon">handshake</span><span class="settings-group__copy"><strong>Supporter & Partner</strong><small>Logo sponsor, partner, supporter, atau iklan di footer publik.</small></span><span class="material-symbols-outlined settings-group__chevron">chevron_right</span></button>`;shell.appendChild(group);const parent=$('[data-section="settings"]');parent.insertAdjacentHTML('beforeend',`<div class="settings-view" data-settings-view="supporters" hidden><div class="settings-view-head"><button class="settings-back" type="button" data-supporter-back><span class="material-symbols-outlined">arrow_back</span></button><div><h3 style="margin:0">Supporter & Partner</h3><p class="muted mini">Atur logo yang tampil di footer landing.</p></div></div><div class="supporter-admin-list-v0512" data-supporter-admin-list></div><div class="form-actions"><button class="btn btn-soft" type="button" data-supporter-add>+ Tambah Logo</button><button class="btn btn-primary" type="button" data-supporter-save>Simpan</button></div></div>`);group.querySelector('button').onclick=()=>openSupporters();$('[data-supporter-back]').onclick=()=>showSetting('home');$('[data-supporter-add]').onclick=()=>addSupporterRow();$('[data-supporter-save]').onclick=saveSupporters}
+function showSetting(name){$$('[data-settings-view]').forEach(v=>v.hidden=v.dataset.settingsView!==name)}
+async function openSupporters(){showSetting('supporters');const root=$('[data-supporter-admin-list]');root.innerHTML='<div class="skeleton skeleton-card"></div>';let items=[];try{const r=await KiaAuth.request('/api/public/settings',{timeout:12000}),raw=r.data?.supporter_logos_json||'';if(raw)items=JSON.parse(raw)}catch(_){}root.innerHTML='';(Array.isArray(items)&&items.length?items:[{name:'KIA',image_url:'./icons/kia-symbol-v030.png',link:''},{name:'Finance Tracker',image_url:'',link:''}]).forEach(addSupporterRow)}
+function addSupporterRow(item={}){const root=$('[data-supporter-admin-list]');if(!root)return;const row=document.createElement('div');row.className='supporter-admin-row-v0512';row.innerHTML=`<input data-sup-name placeholder="Nama" value="${esc(item.name||'')}"><input data-sup-image placeholder="URL Logo" value="${esc(item.image_url||'')}"><input data-sup-link placeholder="Link tujuan (opsional)" value="${esc(item.link||'')}"><button class="btn btn-danger" type="button">Hapus</button>`;row.querySelector('button').onclick=()=>row.remove();root.appendChild(row)}
+async function saveSupporters(){const items=$$('.supporter-admin-row-v0512').map(r=>({name:r.querySelector('[data-sup-name]').value.trim(),image_url:r.querySelector('[data-sup-image]').value.trim(),link:r.querySelector('[data-sup-link]').value.trim()})).filter(x=>x.name||x.image_url);try{await KiaAuth.request('/api/admin/site-settings',{method:'POST',body:JSON.stringify({supporter_logos_json:JSON.stringify(items)}),timeout:16000});KiaUI.toast('Supporter footer disimpan',{type:'success'})}catch(e){KiaUI.toast(e.message||'Supporter gagal disimpan',{type:'error'})}}
 
-  function observeRoutes(){
-    const refresh=()=>{
-      injectStyle();injectProfileEditor();
-      const hash=(location.hash||'#home').slice(1);
-      if(hash==='impact'){badgeGuide();injectPending();loadImpact();loadPending()}
-      if(hash==='account')loadProfile();
-    };
-    window.addEventListener('hashchange',()=>setTimeout(refresh,40));
-    setTimeout(refresh,60);
-    setTimeout(refresh,700);
-  }
-
-  document.addEventListener('DOMContentLoaded',()=>{injectStyle();observeRoutes()});
-  window.KiaDonorImpact={load:loadImpact,refresh:()=>{impactLoaded=false;pendingLoaded=false;return loadImpact(true)}};
+function init(){restructure();window.addEventListener('hashchange',()=>{if(location.hash==='#verification')location.hash='#account';if(location.hash==='#impact'){loadImpact();loadPending()}if(location.hash==='#account')loadProfile()});setTimeout(()=>{restructure();if(location.hash==='#impact')loadImpact()},700)}
+document.addEventListener('DOMContentLoaded',init);
+window.KiaDonorImpact={load:loadImpact,refresh:()=>{impactLoaded=false;pendingLoaded=false;return loadImpact(true)}};
 })();

@@ -1,23 +1,24 @@
-KIA v0.5.10 BUILD 511 — PHASE B FINAL / FULL REPLACEMENT
+KIA v0.5.10 BUILD 512 — PHASE C FULL REPLACEMENT
 
-FRONTEND — REPLACE/ADD SESUAI PATH
+FRONTEND REPLACE
 assets/css/v0510-patch.css
-assets/css/v0510b-patch.css
+assets/js/public-v0510.js
+assets/js/program-v0510.js
 assets/js/donor-impact-v051.js
-assets/js/payment-phase-b-v0510.js
 payment.html
 app-version.json
 changelog.json
 service-worker.js
 
-SERVER — LANGSUNG TIMPA SEMUA
-server/README.md
-server/package.json
-server/server.js
+FRONTEND NEW
+assets/js/payment-phase-c-v0512.js
 
-TIDAK ADA
-server/v0510-phase-b.js
-manual patch server
-Apps Script migration
-Spreadsheet schema change
-ENV baru
+SERVER — TIMPA 3 FILE LANGSUNG
+server/server.js
+server/package.json
+server/README.md
+
+NO CHANGE
+Apps Script
+Spreadsheet schema
+DOKU ENV / credential

@@ -1,15 +1,20 @@
 [
   {
     "version": "0.5.10",
-    "build": 511,
+    "build": 512,
     "date": "2026-09-18",
-    "title": "Public Room, Reliability & Account UX",
+    "title": "Phase C Stabilization & Experience Polish",
     "new": [
       "Room Donasi publik diperluas dengan hero transparansi, filter periode, program, badge, pencarian halaman aktif, dan urutan nominal",
       "Dampak Saya memiliki penjelasan interaktif tentang level dan badge serta progress tipis menuju level berikutnya",
       "Profil Akun dapat diperbarui untuk nama, telepon, dan alamat tanpa mengubah email/jenis akun",
       "Dampak Saya menampilkan transaksi donasi PENDING yang dapat dilanjutkan menggunakan Donation yang sama",
-      "Badge Saya memiliki panel Tingkatan Badge yang menjelaskan syarat badge aktivitas"
+      "Badge Saya memiliki panel Tingkatan Badge yang menjelaskan syarat badge aktivitas",
+      "Level Aktivitas menampilkan EXP, progress level, daftar level, dan misi badge",
+      "Foto profil akun dapat diganti dari Dashboard",
+      "Draft/Rejected Program dapat dihapus dari daftar secara aman melalui arsip",
+      "Footer supporter/partner dapat diatur SUPER_ADMIN",
+      "Live Donation memiliki status LIVE/OFFLINE/MAINTENANCE"
     ],
     "improvements": [
       "Hero landing dipendekkan dan distandarkan untuk desktop, tablet, dan mobile",
@@ -19,13 +24,27 @@
       "Menu admin yang hidden tidak lagi dapat muncul karena aturan display komponen",
       "Headline hero landing diperkecil dan diseimbangkan agar hero compact tetap nyaman dibaca",
       "Halaman pembayaran aktif memakai quick-status reconciliation sehingga status PAID dapat berubah otomatis lebih cepat tanpa menunggu klik Sinkronkan Status",
-      "Struk donasi memiliki header, footer, ucapan terima kasih, dan penjelasan bahwa donasi berasal dari donatur terkait sementara KIA hanya memfasilitasi proses"
+      "Struk donasi memiliki header, footer, ucapan terima kasih, dan penjelasan bahwa donasi berasal dari donatur terkait sementara KIA hanya memfasilitasi proses",
+      "Verifikasi digabung ke room Akun",
+      "Riwayat Dukungan dibatasi tinggi lima item lalu scroll",
+      "Menunggu Pembayaran dipadatkan dan nominal diperkuat",
+      "Landing hero menampilkan lebih banyak area gambar tanpa menaikkan tinggi",
+      "Spacing Hero–Ringkasan–Program diseimbangkan dan tombol Lihat Semua Program ganda dihapus",
+      "Pusat Bantuan & Kepercayaan dikembangkan menjadi empat jalur bantuan plus quick help",
+      "Perkembangan dan Transparansi Program digabung",
+      "Checkout mengembalikan shell segera sementara channel DOKU disiapkan di background",
+      "Payment UI kembali memakai renderer stabil v0.5.8 tanpa layer Phase B yang berlebihan"
     ],
     "security": [
       "Room Donasi tetap publik tetapi hanya memakai data publik tervalidasi; kontak, ID internal, Virtual Account, dan referensi provider tidak ditampilkan",
       "Status Anonim tetap ditampilkan sebagai Hamba Allah",
       "Endpoint profil dan riwayat pending wajib session user",
       "Resume pembayaran memakai signed checkout view token baru dan tidak mengekspos payment reference internal"
+    ],
+    "fixes": [
+      "Memperbaiki regresi tampilan payment Phase B",
+      "Memperbaiki menu Verifikasi yang duplikatif dengan Akun",
+      "Memperbaiki CTA penggalangan yang terlalu besar dan terlalu dekat footer"
     ]
   },
   {

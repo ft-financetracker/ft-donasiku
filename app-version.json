@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 511,
+  "build": 512,
   "released_at": "2026-09-18",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Phase B reliability and account UX: corrected compact landing hero, badge guidance in Badge Saya, editable account profile, resumable pending donations, faster active payment reconciliation, and professional donor-attributed receipts"
+  "summary": "Phase C stabilization: payment UX rollback with faster async channel preparation, dashboard/account consolidation, EXP and mission gamification, profile avatar, program draft controls, landing spacing/live/help/footer polish, and merged progress transparency"
 }
