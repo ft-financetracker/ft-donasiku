@@ -1,14 +1,15 @@
-# KIA Backend v0.5.10 Build 513 — Stability Recovery
+# KIA Backend v0.5.10 Build 515 — Program Lifecycle
 
-Full replacement server.
+Full replacement server based on stable Build 514 backend.
 
-Build 513:
-- returns to the stable payment engine baseline
-- filters ARCHIVED drafts from Dashboard bootstrap
-- confirms draft archive before returning success
-- profile avatar upload
-- Hero & Media + Settings enforced for SUPER_ADMIN server-side
-- Review Admin remains available to PLATFORM_ADMIN / SUPER_ADMIN
+Build 515 changes only Program Lifecycle:
+- POST /api/programs/:id/lifecycle
+  - STOP_DONATION: ACTIVE -> PAUSED
+  - RESUME_DONATION: PAUSED -> ACTIVE
+  - COMPLETE_PROGRAM: PAUSED -> COMPLETED
+- checkout rejects new donations unless program status is ACTIVE
+- existing PAID donations and Dana Lebih remain untouched
 
-Deploy: replace `server.js`, `package.json`, and `README.md`.
-No Apps Script migration. No new ENV.
+No Apps Script migration.
+No Spreadsheet schema change.
+No DOKU/Payment engine changes.

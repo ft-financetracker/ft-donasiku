@@ -1237,6 +1237,57 @@ app.post('/api/programs/:id/status',async(req,res)=>{
 });
 
 
+app.post('/api/programs/:id/lifecycle',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    const program=await ownedProgram(user,req.params.id);
+    const before=String(program.status||'').toUpperCase();
+    const action=text(req.body?.action,40).toUpperCase();
+
+    const rules={
+      STOP_DONATION:{from:['ACTIVE'],to:'PAUSED',audit:'STOP_DONATION'},
+      RESUME_DONATION:{from:['PAUSED'],to:'ACTIVE',audit:'RESUME_DONATION'},
+      COMPLETE_PROGRAM:{from:['PAUSED'],to:'COMPLETED',audit:'COMPLETE_PROGRAM'}
+    };
+    const rule=rules[action];
+    if(!rule) throw httpError(400,'Aksi lifecycle program tidak dikenali.','INVALID_LIFECYCLE_ACTION');
+    if(!rule.from.includes(before)){
+      throw httpError(409,`Program berstatus ${before||'UNKNOWN'} tidak dapat menjalankan aksi ini.`,'INVALID_PROGRAM_STATUS');
+    }
+
+    const patch={status:rule.to,updated_at:new Date().toISOString()};
+    await gas('update',{
+      sheet:'06_PROGRAMS',
+      idField:'program_id',
+      id:program.program_id,
+      patch
+    },{timeout:15000,attempts:1});
+
+    const confirmed=await gas('findOne',{
+      sheet:'06_PROGRAMS',
+      filters:{program_id:program.program_id}
+    },{timeout:10000,attempts:1});
+
+    if(String(confirmed?.status||'').toUpperCase()!==rule.to){
+      throw httpError(503,'Status program belum berhasil disimpan. Silakan coba lagi.','WRITE_BUSY');
+    }
+
+    clearPublicResponseCache();
+    await audit(user,rule.audit,'PROGRAM',program.program_id,{status:before},patch);
+
+    res.json({
+      success:true,
+      data:{
+        program_id:program.program_id,
+        previous_status:before,
+        status:rule.to,
+        donation_accepting:rule.to==='ACTIVE'
+      }
+    });
+  }catch(e){sendError(res,e)}
+});
+
+
 app.get('/api/programs/:id/updates',async(req,res)=>{
   try{
     const token_hash=requestTokenHash(req);
@@ -1381,6 +1432,15 @@ app.post('/api/donations/checkout',async(req,res)=>{
     if(gross_amount<1000) throw httpError(400,'Nominal donasi minimal Rp1.000.','INVALID_DONATION_AMOUNT');
     if(!['QRIS','VIRTUAL_ACCOUNT'].includes(payment_method)) throw httpError(400,'Metode pembayaran belum didukung.','INVALID_PAYMENT_METHOD');
     if(!program_id||!donor_name) throw httpError(400,'Nama donatur dan program wajib diisi.','INCOMPLETE_DONATION');
+
+    const targetProgram=await gas('findOne',{
+      sheet:'06_PROGRAMS',
+      filters:{program_id}
+    },{timeout:10000,attempts:1});
+    if(!targetProgram) throw httpError(404,'Program donasi tidak ditemukan.','PROGRAM_NOT_FOUND');
+    if(String(targetProgram.status||'').toUpperCase()!=='ACTIVE'){
+      throw httpError(409,'Penerimaan donasi untuk program ini sedang ditutup.','PROGRAM_DONATION_CLOSED');
+    }
 
     const authUser=await sessionUser(req).catch(()=>null);
     const now=new Date().toISOString();
