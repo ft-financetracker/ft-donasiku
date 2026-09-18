@@ -10,3 +10,34 @@
 .donation-room-filter-card-v0510{padding:14px;margin-bottom:14px}.donation-room-filter-grid-v0510{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(150px,.8fr) minmax(140px,.65fr) minmax(140px,.65fr);gap:10px;align-items:end}.room-field-v0510{display:grid;gap:6px}.room-field-v0510>span{font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}.room-field-v0510 input,.room-field-v0510 select{width:100%;height:42px;border:1px solid var(--border);border-radius:11px;background:#fff;padding:0 11px;font:inherit;font-size:12px;color:var(--text)}.donation-room-periods-v0510{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.donation-room-periods-v0510 .btn{min-height:36px;padding:0 12px;font-size:11px}.room-filter-note-v0510{margin-top:9px;color:var(--muted);font-size:9px}@media(max-width:900px){.donation-room-filter-grid-v0510{grid-template-columns:1fr 1fr}.room-field-v0510:first-child{grid-column:1/-1}}@media(max-width:560px){.donation-room-filter-grid-v0510{grid-template-columns:1fr}.room-field-v0510:first-child{grid-column:auto}.donation-room-periods-v0510{display:grid;grid-template-columns:1fr 1fr}.donation-room-periods-v0510 .btn{width:100%}}
 .donation-room-list-v0510{display:grid;gap:8px}.donation-room-row-v0510{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid #e3ebe7;border-radius:14px;background:#fff;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.donation-room-row-v0510:hover{border-color:#c7ddd4;box-shadow:0 7px 22px rgba(18,63,47,.06);transform:translateY(-1px)}.room-no-v0510{font-size:9px;font-weight:900;color:#9aa49f;text-align:center}.room-main-v0510{min-width:0;display:grid;gap:3px}.room-person-v0510{display:flex;align-items:center;gap:7px;min-width:0}.room-person-v0510 strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.room-program-v0510,.room-message-v0510{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-program-v0510{color:#45524c}.room-message-v0510{color:#7a8580;font-style:italic}.room-amount-v0510{text-align:right;white-space:nowrap}.room-amount-v0510 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:15px}.room-amount-v0510 time{display:block;margin-top:2px;color:#8a9590;font-size:8px}@media(max-width:620px){.donation-room-row-v0510{grid-template-columns:30px minmax(0,1fr);gap:8px;padding:11px}.room-amount-v0510{grid-column:2;text-align:left;display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:3px}.room-amount-v0510 time{margin:0}}
 .live-donation-grid.live-marquee-v0510{overflow:hidden!important;display:block!important;padding:2px 0 9px!important;scroll-snap-type:none!important}.live-marquee-track-v0510{display:flex;width:max-content;gap:12px;will-change:transform;animation:kiaLiveMarqueeV0510 var(--live-duration,42s) linear infinite}.live-donation-grid.live-marquee-v0510:hover .live-marquee-track-v0510{animation-play-state:paused}.live-marquee-track-v0510 .live-donation-card-v058{flex:0 0 340px}@keyframes kiaLiveMarqueeV0510{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 6px))}}@media(prefers-reduced-motion:reduce){.live-marquee-track-v0510{animation:none;transform:none}.live-donation-grid.live-marquee-v0510{overflow-x:auto!important}}@media(max-width:700px){.live-marquee-track-v0510 .live-donation-card-v058{flex-basis:285px}.live-marquee-track-v0510{--live-duration:36s}}
+
+/* v0.5.10 Build 511 — landing hero typography correction.
+   Hero tetap compact; headline tidak lagi terasa terlalu besar/menekan foto. */
+.hero-carousel__content{
+  justify-content:center!important;
+  width:min(100%,620px)!important;
+  padding:26px 32px!important
+}
+.hero-carousel h1{
+  max-width:590px!important;
+  margin:5px 0 9px!important;
+  font-size:clamp(27px,3vw,38px)!important;
+  line-height:1.04!important;
+  letter-spacing:-.035em!important;
+  text-wrap:balance
+}
+.hero-carousel__content>p:not(.hero-eyebrow){
+  max-width:530px!important;
+  margin-top:0!important
+}
+.hero-carousel .hero-actions{margin-top:13px!important}
+@media(max-width:900px){
+  .hero-carousel__content{width:min(100%,570px)!important;padding:22px 26px!important}
+  .hero-carousel h1{font-size:clamp(26px,4.2vw,34px)!important;max-width:520px!important}
+}
+@media(max-width:600px){
+  .hero-carousel__content{width:88%!important;max-width:88%!important;padding:17px 18px!important}
+  .hero-carousel h1{font-size:clamp(23px,7.3vw,29px)!important;line-height:1.05!important}
+  .hero-carousel__content>p:not(.hero-eyebrow){font-size:11px!important;line-height:1.42!important}
+  .hero-carousel .hero-actions{margin-top:10px!important}
+}

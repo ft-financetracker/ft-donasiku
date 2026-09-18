@@ -1,23 +1,31 @@
-NEW
-assets/css/v0510-patch.css
-assets/js/donations-v0510.js
-assets/js/catalog-v0510.js
-assets/js/public-v0510.js
-assets/js/program-v0510.js
+KIA v0.5.10 BUILD 511 — PHASE B DELTA
 
-REPLACE
+REPLACE GITHUB
+assets/css/v0510-patch.css
 assets/js/donor-impact-v051.js
-index.html
-program.html
-programs.html
-donations.html
+payment.html
 app-version.json
 changelog.json
 service-worker.js
 
+NEW GITHUB
+assets/css/v0510b-patch.css
+assets/js/payment-phase-b-v0510.js
+
+SERVER NEW
+server/v0510-phase-b.js
+
+SERVER REPLACE
+server/package.json
+
+SERVER MANUAL PATCH
+server/server.js
+→ follow server/PATCH_SERVER_PHASE_B.md
+
 DO NOT TOUCH
 Apps Script
-Spreadsheet
-DOKU
-payment engine
-auth engine
+Spreadsheet schema
+DOKU env/credentials
+v0.5.9 social engine
+Phase A Room Donasi
+Program lifecycle v0.6.0
