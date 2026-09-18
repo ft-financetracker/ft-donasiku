@@ -652,7 +652,7 @@ app.get('/health',async(req,res)=>{
     success:true,
     data:{
       app:'KIA Backend',
-      version:'0.5.8',
+      version:'0.5.10',
       auth_cache_entries:authUserCache.size,
       doku_env:DOKU_ENV
     }
@@ -1716,7 +1716,7 @@ app.get('/api/admin/settings',async(req,res)=>{
         platform:{
           name:'KIA — Donasi Online',
           founder:'Finance Tracker',
-          version:'0.5.8'
+          version:'0.5.10'
         }
       }
     });
@@ -1788,6 +1788,264 @@ app.get('/api/security/sessions',async(req,res)=>{
 app.post('/api/security/logout-all',async(req,res)=>{
   try{const token_hash=requestTokenHash(req);const data=await gas('revokeAllSessionsFast',{token_hash},{timeout:12000});sessionCache.clear();res.json({success:true,data})}catch(e){sendError(res,e)}
 });
+
+
+// ------------------------------------------------------------------
+// v0.5.10 BUILD 511 — PHASE B
+// Account Profile + Pending Donation + Active Payment Quick Status
+// Full replacement build: integrated directly into server.js.
+// ------------------------------------------------------------------
+const v0510QuickProviderCheck=new Map();
+const v0510PendingCache=new Map();
+
+function v0510PendingCacheKey(userId){
+  return String(userId||'');
+}
+
+app.get('/api/account/profile',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    const profile=await gas('findOne',{
+      sheet:'02_USER_PROFILES',
+      filters:{user_id:user.user_id}
+    },{timeout:10000,attempts:1});
+
+    res.json({
+      success:true,
+      data:{
+        user:publicUser(user),
+        profile:{
+          address:profile?.address||'',
+          avatar_url:profile?.avatar_url||'',
+          identity_status:profile?.identity_status||'UNVERIFIED'
+        }
+      }
+    });
+  }catch(e){
+    sendError(res,e);
+  }
+});
+
+app.post('/api/account/profile',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    const full_name=text(req.body?.full_name,140);
+    const phone=text(req.body?.phone,60);
+    const address=text(req.body?.address,600);
+
+    if(!full_name){
+      throw httpError(400,'Nama akun wajib diisi.','PROFILE_NAME_REQUIRED');
+    }
+
+    const now=new Date().toISOString();
+    const userPatch={full_name,phone,updated_at:now};
+
+    await gas('update',{
+      sheet:'01_USERS',
+      idField:'user_id',
+      id:user.user_id,
+      patch:userPatch
+    },{timeout:14000,attempts:1});
+
+    let profile=await gas('findOne',{
+      sheet:'02_USER_PROFILES',
+      filters:{user_id:user.user_id}
+    },{timeout:9000,attempts:1});
+
+    if(profile?.profile_id){
+      await gas('update',{
+        sheet:'02_USER_PROFILES',
+        idField:'profile_id',
+        id:profile.profile_id,
+        patch:{address,updated_at:now}
+      },{timeout:14000,attempts:1});
+      profile={...profile,address,updated_at:now};
+    }else{
+      profile={
+        profile_id:id('prf'),
+        user_id:user.user_id,
+        address,
+        avatar_url:'',
+        identity_status:'UNVERIFIED',
+        identity_type:'',
+        identity_number:'',
+        created_at:now,
+        updated_at:now
+      };
+      await gas('insert',{
+        sheet:'02_USER_PROFILES',
+        row:profile
+      },{timeout:14000,attempts:1});
+    }
+
+    const nextUser={...user,...userPatch};
+    refreshCachedUser(nextUser);
+    cacheAuthUserRow(nextUser);
+
+    res.json({
+      success:true,
+      data:{
+        user:publicUser(nextUser),
+        profile:{
+          address:profile.address||'',
+          avatar_url:profile.avatar_url||'',
+          identity_status:profile.identity_status||'UNVERIFIED'
+        }
+      }
+    });
+  }catch(e){
+    sendError(res,e);
+  }
+});
+
+app.get('/api/donor/pending-payments',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    const key=v0510PendingCacheKey(user.user_id);
+    const cached=v0510PendingCache.get(key);
+
+    if(cached&&Date.now()-cached.savedAt<20000){
+      return res.json({success:true,data:cached.data,cache:'HIT'});
+    }
+
+    const donations=await gas('listWhere',{
+      sheet:'08_DONATIONS',
+      filters:{user_id:user.user_id,status:'PENDING'},
+      limit:30
+    },{timeout:12000,attempts:1});
+
+    const selected=(Array.isArray(donations)?donations:[])
+      .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))
+      .slice(0,6);
+
+    const items=[];
+
+    for(const d of selected){
+      const [program,payments]=await Promise.all([
+        gas('findOne',{
+          sheet:'06_PROGRAMS',
+          filters:{program_id:d.program_id}
+        },{timeout:9000,attempts:1}).catch(()=>null),
+
+        gas('listWhere',{
+          sheet:'09_PAYMENTS',
+          filters:{donation_id:d.donation_id},
+          limit:20
+        },{timeout:9000,attempts:1}).catch(()=>[])
+      ]);
+
+      const attempts=(Array.isArray(payments)?payments:[])
+        .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+
+      const p=attempts[0]||null;
+      if(!p?.payment_id) continue;
+
+      const view_token=signCheckoutViewToken({
+        donation_id:d.donation_id,
+        payment_id:p.payment_id,
+        exp:Date.now()+7*864e5
+      });
+
+      items.push({
+        donation_code:d.donation_code||'',
+        program_name:program?.program_name||'Program KIA',
+        gross_amount:Number(d.gross_amount)||0,
+        donation_created_at:d.created_at||'',
+        payment_status:p.status||'CREATED',
+        payment_method:p.payment_method||'',
+        expired_at:p.expired_at||'',
+        view_token
+      });
+    }
+
+    const data={items};
+    v0510PendingCache.set(key,{savedAt:Date.now(),data});
+    res.json({success:true,data,cache:'MISS'});
+  }catch(e){
+    sendError(res,e);
+  }
+});
+
+app.get('/api/payments/quick-status',async(req,res)=>{
+  try{
+    const token=verifyCheckoutViewToken(req.query.token);
+    if(!token){
+      throw httpError(
+        401,
+        'Tautan status pembayaran tidak valid atau sudah kedaluwarsa.',
+        'INVALID_CHECKOUT_TOKEN'
+      );
+    }
+
+    let snap=await paymentSnapshot(token.donation_id,token.payment_id);
+    let reconciliation={checked:false,reason:'LOCAL_ONLY'};
+
+    const p=snap.payment||{};
+    const age=paymentAgeMs(p);
+    const key=String(p.payment_id||token.payment_id);
+    const last=Number(v0510QuickProviderCheck.get(key)||0);
+
+    // Webhook remains primary. Provider inquiry is only an active-page fallback.
+    // Start after 10s, then max roughly one provider inquiry / 12s / payment.
+    const due=
+      !paymentIsTerminal(p.status) &&
+      dokuConfigured() &&
+      age>=10000 &&
+      Date.now()-last>=12000;
+
+    if(due){
+      v0510QuickProviderCheck.set(key,Date.now());
+
+      const identifier=String(
+        p.provider_invoice_number||p.provider_reference||''
+      ).trim();
+
+      if(identifier){
+        try{
+          const inquiry=await dokuCheckStatus(identifier);
+          const applied=await applyDokuStatus(
+            p,
+            inquiry,
+            {source:'ACTIVE_PAYMENT_PAGE'}
+          );
+
+          reconciliation={
+            checked:true,
+            provider_status:inquiry.status,
+            changed:!!applied.changed
+          };
+
+          if(applied.changed){
+            snap=await paymentSnapshot(
+              token.donation_id,
+              token.payment_id
+            );
+          }
+        }catch(err){
+          reconciliation={
+            checked:true,
+            failed:true,
+            reason:err?.code||'DOKU_STATUS_FAILED'
+          };
+        }
+      }
+    }
+
+    res.json({
+      success:true,
+      data:{
+        ...(snap.view||{}),
+        provider_ready:!!snap.view?.payment?.payment_url,
+        doku_configured:dokuConfigured(),
+        doku_env:DOKU_ENV,
+        reconciliation
+      }
+    });
+  }catch(e){
+    sendError(res,e);
+  }
+});
+
 
 app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);
