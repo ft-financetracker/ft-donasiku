@@ -1,0 +1,109 @@
+/* KIA v0.5.9 — isolated patch only.
+   Existing tokens, typography, component geometry, and v0.5.8 design remain authoritative. */
+
+.program-poster{position:relative}
+.program-main-wrap-v059{position:relative}
+.program-main-wrap-v059 .program-main-image{display:block;width:100%}
+
+.program-complete-stamp-v059{
+  position:absolute;
+  z-index:3;
+  top:50%;
+  left:50%;
+  width:116px;
+  height:116px;
+  transform:translate(-50%,-50%) rotate(-11deg);
+  display:grid;
+  place-content:center;
+  gap:1px;
+  border:3px solid rgba(164,55,55,.62);
+  border-radius:50%;
+  background:rgba(255,255,255,.12);
+  color:rgba(148,42,42,.74);
+  text-align:center;
+  line-height:1;
+  letter-spacing:.05em;
+  pointer-events:none;
+  box-shadow:inset 0 0 0 4px rgba(164,55,55,.12);
+  backdrop-filter:blur(.25px)
+}
+.program-complete-stamp-v059::before,
+.program-complete-stamp-v059::after{
+  content:"";
+  position:absolute;
+  left:17px;
+  right:17px;
+  height:2px;
+  background:currentColor;
+  opacity:.72
+}
+.program-complete-stamp-v059::before{top:32px}
+.program-complete-stamp-v059::after{bottom:31px}
+.program-complete-stamp-v059 strong{font-family:var(--font-number);font-size:26px;font-weight:900}
+.program-complete-stamp-v059 span{font-size:14px;font-weight:900}
+.program-complete-stamp-v059--detail{width:142px;height:142px}
+.program-complete-stamp-v059--detail strong{font-size:32px}
+.program-complete-stamp-v059--detail span{font-size:16px}
+
+.funding-overflow-v059{
+  margin-top:13px;
+  padding:13px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:#fbfdfc
+}
+.funding-overflow-v059[hidden]{display:none!important}
+.funding-overflow-title-v059{display:flex;align-items:center;gap:7px;margin-bottom:9px;color:var(--primary);font-size:12px;font-weight:850}
+.funding-overflow-grid-v059{display:grid;gap:7px}
+.funding-overflow-row-v059{display:flex;justify-content:space-between;gap:14px;font-size:12px}
+.funding-overflow-row-v059 span{color:var(--muted)}
+.funding-overflow-row-v059 strong{font-family:var(--font-number);font-variant-numeric:tabular-nums}
+.funding-overflow-row-v059.is-excess strong{color:var(--primary)}
+.funding-overflow-alert-v059{
+  margin-top:10px;
+  padding:10px 11px;
+  border-radius:10px;
+  background:#fff6e5;
+  color:#76591c;
+  font-size:11px;
+  font-weight:750;
+  line-height:1.5
+}
+.program-complete-note-v059{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  margin:12px 0;
+  padding:11px 12px;
+  border-radius:12px;
+  background:#edf6f2;
+  color:#315c4d;
+  font-size:11px;
+  line-height:1.5
+}
+.program-complete-note-v059 .material-symbols-outlined{font-size:18px;color:var(--primary)}
+
+.social-event-state-v059{display:inline-block;margin-left:7px;color:var(--muted);font-size:10px;font-weight:700}
+.social-retry-v059{
+  display:inline-flex;
+  margin:5px 0 0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#9a493f;
+  font:inherit;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+  text-decoration:underline
+}
+
+@media(max-width:700px){
+  .program-complete-stamp-v059{width:96px;height:96px;border-width:2px}
+  .program-complete-stamp-v059 strong{font-size:22px}
+  .program-complete-stamp-v059 span{font-size:12px}
+  .program-complete-stamp-v059::before{top:26px}
+  .program-complete-stamp-v059::after{bottom:25px}
+  .program-complete-stamp-v059--detail{width:118px;height:118px}
+  .program-complete-stamp-v059--detail strong{font-size:27px}
+}

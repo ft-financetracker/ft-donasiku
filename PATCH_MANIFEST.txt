@@ -1,0 +1,38 @@
+KIA v0.5.9 — PATCH MANIFEST
+
+NEW
+assets/css/v059-patch.css
+assets/js/catalog-v059.js
+assets/js/donate-v059.js
+assets/js/donation-social-v059.js
+assets/js/program-v059.js
+assets/js/public-v059.js
+CHANGELOG_v0.5.9.md
+CHECKPOINT_v0.5.9.md
+QA_REPORT_v0.5.9.md
+README_DEPLOY_v0.5.9.md
+server/PATCH_SERVER_V059.md
+
+REPLACE
+index.html
+programs.html
+program.html
+program-donations.html
+donate.html
+service-worker.js
+app-version.json
+changelog.json
+server/package.json
+
+UNCHANGED / DO NOT TOUCH
+Apps Script
+Spreadsheet schema
+DOKU engine
+Auth engine
+Design tokens
+Typography
+Base CSS
+Payment UI v0.5.8
+Dashboard
+Room Donasi
+Live Donation layout

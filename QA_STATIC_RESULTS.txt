@@ -1,0 +1,40 @@
+KIA v0.5.9 — STATIC QA RESULT
+Date: 2026-09-18
+
+PASS
+- donation-social-v059.js: JavaScript syntax
+- donate-v059.js: JavaScript syntax
+- public-v059.js: JavaScript syntax
+- catalog-v059.js: JavaScript syntax
+- program-v059.js: JavaScript syntax
+- service-worker.js: JavaScript syntax
+- app-version.json: valid JSON
+- changelog.json: valid JSON
+- server/package.json: valid JSON
+- Service Worker version: 0.5.9
+- Service Worker build: 59
+- Cache name: kia-v0.5.9
+- Patched HTML does not actively reference:
+  public-v040.js
+  catalog-v040.js
+  program-v040.js
+  donate-v050.js
+  donation-social-v058.js
+
+FUNDING CASE CHECK
+Target       : Rp5.000.000
+Paid raised  : Rp4.950.000
+New donation : Rp100.000
+Remaining    : Rp50.000
+Program      : Rp50.000
+Dana Lebih   : Rp50.000
+Public pct   : max 100%
+
+NOT EXECUTED HERE
+- Live browser/runtime test
+- Real DOKU Sandbox payment
+- Real Apps Script persistence
+- Render redeploy
+
+Reason:
+The connected GitHub integration has read access but no push/write permission (branch creation returned HTTP 403).

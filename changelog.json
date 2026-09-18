@@ -1,5 +1,29 @@
 [
   {
+    "version": "0.5.9",
+    "build": 59,
+    "date": "2026-09-18",
+    "title": "Instant Social & Target Completion",
+    "new": [
+      "Donasi yang melebihi sisa target menampilkan pemisahan Masuk ke Program dan Dana Lebih sebelum pembayaran dibuat",
+      "Program yang mencapai target menampilkan cap semi-transparan 100% SELESAI pada cover tanpa menutup visual asli"
+    ],
+    "improvements": [
+      "Love/unlove memperbarui count dan timeline secara instan di browser sementara persistence berjalan di background",
+      "Doa/pesan langsung muncul pada timeline dengan status pending/retry tanpa reload timeline penuh",
+      "Progress publik berhenti di 100% dan nominal Terkumpul pada kartu/ringkasan dikunci maksimal sebesar target; nilai bruto tetap dipertahankan untuk transparansi"
+    ],
+    "fixes": [
+      "Kegagalan sinkronisasi sementara tidak lagi langsung menghilangkan Love dari UI; state direkonsiliasi dengan server sebelum retry",
+      "Komentar yang gagal tidak langsung dibuang; pengguna dapat mencoba kirim ulang",
+      "Program tidak lagi terlihat melewati 100% ketika donasi tervalidasi melebihi target"
+    ],
+    "security": [
+      "Love/Doa tetap membutuhkan akun login dan tetap dipersistensikan server-side",
+      "Dana Lebih v0.5.9 dihitung sebagai state turunan dari target dan pembayaran PAID sehingga tidak mengubah skema database atau fondasi Payment"
+    ]
+  },
+  {
     "version": "0.5.8",
     "build": 58,
     "date": "2026-09-17",

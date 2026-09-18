@@ -1,18 +1,10 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#176b52">
-  <title>Donasi | KIA</title>
-  <link rel="manifest" href="./manifest-v040.json">
-  <link rel="icon" href="./icons/favicon-white-v040.ico?v=058">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#176b52"><title>Donasi | KIA</title>
+  <link rel="manifest" href="./manifest-v040.json"><link rel="icon" href="./icons/favicon-white-v040.ico?v=059">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/tokens.css">
-  <link rel="stylesheet" href="./assets/css/components.css">
-  <link rel="stylesheet" href="./assets/css/ui.css">
-  <link rel="stylesheet" href="./assets/css/public-v040.css">
-  <link rel="stylesheet" href="./assets/css/checkout-v050.css?v=058">
+  <link rel="stylesheet" href="./assets/css/tokens.css"><link rel="stylesheet" href="./assets/css/components.css"><link rel="stylesheet" href="./assets/css/ui.css"><link rel="stylesheet" href="./assets/css/public-v040.css"><link rel="stylesheet" href="./assets/css/checkout-v050.css?v=059"><link rel="stylesheet" href="./assets/css/v059-patch.css?v=059">
 </head>
 <body>
 <header><div class="container nav"><a class="brand kia-brand-lockup" href="./"><img src="./icons/kia-symbol-v030.png" alt=""><span>KIA</span></a><a class="btn btn-ghost" href="javascript:history.back()">Kembali</a></div></header>
@@ -27,14 +19,12 @@
           <label class="checkout-field">Nominal lainnya<div class="money-input"><span>Rp</span><input name="gross_amount" inputmode="numeric" type="number" min="1000" step="1000" placeholder="100000" required></div><small>Minimal Rp1.000</small></label>
           <div class="checkout-actions"><button class="btn btn-primary" type="button" data-next="2">Lanjutkan</button></div>
         </section>
-
         <section class="checkout-panel" data-step-panel="2" hidden>
           <h2>Data donatur</h2><p class="muted mini">Login tidak wajib. Jika Anda sudah login, data akun akan digunakan untuk menghubungkan riwayat donasi.</p>
           <div class="checkout-form-grid"><label class="checkout-field">Nama<input name="donor_name" maxlength="140" required></label><label class="checkout-field">Email<input name="donor_email" type="email" maxlength="160"></label><label class="checkout-field">WhatsApp / Telepon<input name="donor_phone" maxlength="60" inputmode="tel"></label><label class="checkout-field full">Pesan / Doa<textarea name="message" maxlength="600" placeholder="Tulis pesan atau doa untuk program ini (opsional)"></textarea></label></div>
           <label class="check-row"><input name="is_anonymous" type="checkbox"><span><strong>Tampilkan sebagai Hamba Allah</strong><small>Nama asli tetap digunakan untuk pencatatan transaksi, tetapi tidak ditampilkan di Live Donation.</small></span></label>
           <div class="checkout-actions"><button class="btn btn-ghost" type="button" data-back="1">Kembali</button><button class="btn btn-primary" type="button" data-next="3">Lanjutkan</button></div>
         </section>
-
         <section class="checkout-panel" data-step-panel="3" hidden>
           <h2>Pilih metode pembayaran</h2><div class="payment-methods"><label class="payment-method"><input type="radio" name="payment_method" value="QRIS" checked><span class="payment-method-icon material-symbols-outlined">qr_code_2</span><span><strong>QRIS</strong><small>Scan melalui aplikasi bank atau dompet digital yang mendukung QRIS.</small></span></label><label class="payment-method"><input type="radio" name="payment_method" value="VIRTUAL_ACCOUNT"><span class="payment-method-icon material-symbols-outlined">account_balance</span><span><strong>Virtual Account</strong><small>Nomor VA dan pilihan channel akan diberikan oleh payment gateway.</small></span></label></div>
           <div class="checkout-note"><span class="material-symbols-outlined">info</span><span>Metode pembayaran akan disiapkan oleh KIA. Donasi baru dihitung setelah status pembayaran berhasil tervalidasi.</span></div>
@@ -43,10 +33,22 @@
       </form>
       <div class="checkout-status" data-checkout-status hidden></div>
     </section>
-
-    <aside class="card checkout-summary"><div class="summary-poster" data-summary-poster></div><span class="program-category" data-summary-category>Program KIA</span><h2 data-summary-title>Memuat program…</h2><div class="summary-row"><span>Donasi</span><strong data-summary-amount>Rp0</strong></div><div class="summary-row"><span>Status program</span><strong>Aktif</strong></div><div class="summary-trust"><span class="material-symbols-outlined">verified</span><span>Program publik telah melalui alur review KIA.</span></div></aside>
+    <aside class="card checkout-summary">
+      <div class="summary-poster" data-summary-poster></div><span class="program-category" data-summary-category>Program KIA</span><h2 data-summary-title>Memuat program…</h2>
+      <div class="summary-row"><span>Donasi</span><strong data-summary-amount>Rp0</strong></div>
+      <div class="summary-row"><span>Status program</span><strong data-summary-status>Aktif</strong></div>
+      <div class="funding-overflow-v059" data-overflow-breakdown hidden>
+        <div class="funding-overflow-title-v059"><span class="material-symbols-outlined">account_balance_wallet</span><span>Alokasi Donasi</span></div>
+        <div class="funding-overflow-grid-v059">
+          <div class="funding-overflow-row-v059"><span>Sisa target</span><strong data-target-remaining>Rp0</strong></div>
+          <div class="funding-overflow-row-v059"><span>Masuk ke program</span><strong data-program-allocation>Rp0</strong></div>
+          <div class="funding-overflow-row-v059 is-excess"><span>Dana Lebih</span><strong data-excess-allocation>Rp0</strong></div>
+        </div>
+        <div class="funding-overflow-alert-v059" data-overflow-notice>Kelebihan donasi akan dihimpun pada Dana Lebih.</div>
+      </div>
+      <div class="summary-trust"><span class="material-symbols-outlined">verified</span><span>Program publik telah melalui alur review KIA.</span></div>
+    </aside>
   </div>
 </main>
-<script src="./assets/js/config.js"></script><script src="./assets/js/auth.js?v=058"></script><script src="./assets/js/ui.js"></script><script src="./assets/js/donate-v050.js?v=058"></script><script src="./assets/js/pwa-v040.js?v=058"></script>
-</body>
-</html>
+<script src="./assets/js/config.js"></script><script src="./assets/js/auth.js?v=059"></script><script src="./assets/js/ui.js"></script><script src="./assets/js/donate-v059.js?v=059"></script><script src="./assets/js/pwa-v040.js?v=059"></script>
+</body></html>
