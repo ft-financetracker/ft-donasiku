@@ -31,7 +31,7 @@ body>header{background:#fff;border-bottom:1px solid rgba(20,62,48,.10);box-shado
 .impact-recent-list{max-height:365px;overflow-y:auto;padding-right:4px}.impact-recent-list::-webkit-scrollbar{width:5px}.impact-recent-list::-webkit-scrollbar-thumb{background:#cddbd5;border-radius:999px}
 .pending-card-v0512{padding:16px!important}.pending-head-v0512{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.pending-head-v0512 h3{margin:0}.pending-head-v0512 p{margin:3px 0 0;font-size:9px}.pending-list-v0512{display:grid;gap:7px;max-height:290px;overflow-y:auto}.pending-item-v0512{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}.pending-item-v0512 h4{margin:0;font-size:11px}.pending-meta-v0512{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.pending-amount-v0512{text-align:right}.pending-amount-v0512 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:18px}.pending-amount-v0512 small{color:var(--muted);font-size:8px}.pending-item-v0512 .btn{min-height:35px;padding:0 10px;font-size:10px;width:100%}
 .account-overview-v0512{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}.avatar-card-v0512{display:grid;justify-items:center;gap:9px;padding:16px;border:1px solid var(--border);border-radius:15px;background:#f8fbf9}.avatar-v0512{width:112px;height:112px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 20px rgba(29,67,53,.12);display:grid;place-items:center;background:#e7f2ee;color:var(--primary);font-size:30px;font-weight:900}.avatar-v0512 img{width:100%;height:100%;object-fit:cover}.avatar-card-v0512 label{cursor:pointer}.account-verify-card-v0512{margin-top:14px!important}.account-profile-form-v0512{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}.account-profile-form-v0512 .form-grid{margin-top:10px}.account-badges-v0512{margin-top:14px;padding:15px;border:1px solid var(--border);border-radius:14px;background:#fbfdfc}.account-badges-list-v0512{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.account-badge-choice-v0512{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:9px;font-weight:800;cursor:pointer}.account-badge-choice-v0512.is-selected{border-color:#72b59d;background:#eaf7f2;color:var(--primary)}
-.program-delete-v0512{border-color:#efc9c5!important;color:#9a443e!important}.program-actions [data-program-status="PAUSE"]{border-color:#e6d7af}.program-actions [data-program-status="RESUME"]{background:#edf8f3}
+.program-delete-v0512{border-color:#efc9c5!important;color:#9a443e!important}.program-actions [data-program-status="PAUSE"]{border-color:#e6d7af}.program-actions [data-program-status="RESUME"]{background:#edf8f3}.program-lifecycle-note-v0515{margin-top:8px;padding:9px 10px;border-radius:10px;background:#f7faf8;border:1px solid var(--border);font-size:9px;line-height:1.5;color:var(--muted)}.program-lifecycle-guide-v0515{margin:0 0 12px;padding:11px 12px;border:1px solid #dce8e3;border-radius:12px;background:#f8fbf9;font-size:9px;line-height:1.55;color:#53625c}.program-lifecycle-guide-v0515 strong{color:var(--text)}.program-complete-v0515{border-color:#b9d9cd!important;background:#eef8f4!important;color:var(--primary)!important}
 .supporter-admin-list-v0512{display:grid;gap:8px;margin-top:12px}.supporter-admin-row-v0512{display:grid;grid-template-columns:1fr 1.5fr 1.5fr auto;gap:8px;align-items:center}.supporter-admin-row-v0512 input{min-height:40px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font:inherit}.supporter-admin-row-v0512 button{min-height:40px}
 @media(max-width:820px){.badge-level-list-v0512{grid-template-columns:1fr 1fr}.mission-grid-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr auto}.pending-amount-v0512{grid-column:2;grid-row:1;text-align:right}.pending-item-v0512 .btn{grid-column:1/-1;width:auto;justify-self:start}.account-overview-v0512{grid-template-columns:1fr}.avatar-card-v0512{grid-template-columns:auto 1fr;justify-items:start;align-items:center}.avatar-v0512{width:86px;height:86px}.supporter-admin-row-v0512{grid-template-columns:1fr 1fr}.supporter-admin-row-v0512 button{grid-column:1/-1;justify-self:start}}
 @media(max-width:540px){.badge-level-list-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr}.pending-amount-v0512{grid-column:auto;grid-row:auto;text-align:left}.app-hero{padding:15px 12px}.impact-level{min-width:0!important;width:100%}.avatar-card-v0512{grid-template-columns:1fr;justify-items:center}.supporter-admin-row-v0512{grid-template-columns:1fr}}
@@ -78,7 +78,138 @@ async function fileToAvatar(file){const bmp=await createImageBitmap(file),side=M
 async function uploadAvatar(e){const file=e.target.files?.[0];e.target.value='';if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){KiaUI.toast('Format foto harus JPG, PNG, atau WEBP.',{type:'error'});return}if(file.size>2*1024*1024){KiaUI.toast('Ukuran foto maksimal 2 MB.',{type:'error'});return}try{KiaUI.showLoading({title:'Mengganti foto profil',message:'Mengoptimalkan foto…'});const payload=await fileToAvatar(file),r=await KiaAuth.request('/api/account/avatar',{method:'POST',body:JSON.stringify(payload),timeout:30000,attempts:1});renderAvatar(r.data?.avatar_url,KiaAuth.getUser()?.full_name);KiaUI.toast('Foto profil diperbarui',{type:'success'})}catch(err){KiaUI.toast(err.message||'Foto profil gagal diubah',{type:'error'})}finally{KiaUI.hideLoading()}}
 function renderAccountBadges(){const root=$('[data-account-badges-list]');if(!root)return;const selected=localStorage.getItem(badgeStore())||'';root.innerHTML=lastBadges.length?lastBadges.map(b=>`<button type="button" class="account-badge-choice-v0512 ${selected===b.code?'is-selected':''}" data-display-badge="${esc(b.code)}"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span>${esc(b.label)}</button>`).join(''):'<span class="muted mini">Belum ada lencana yang dapat dipilih.</span>';$$('[data-display-badge]',root).forEach(b=>b.onclick=()=>{localStorage.setItem(badgeStore(),b.dataset.displayBadge);renderAccountBadges();KiaUI.toast('Lencana tampilan dipilih',{type:'success'})})}
 
-function enhanceProgramRows(){const root=$('[data-program-list]');if(!root)return;root.querySelectorAll('.program-item').forEach(item=>{const actions=item.querySelector('.program-actions'),edit=actions?.querySelector('[data-program-edit]');if(!actions||!edit)return;const id=edit.dataset.programEdit;if(actions.querySelector('[data-delete-draft]'))return;const submit=actions.querySelector('[data-program-submit]');if(submit){const del=document.createElement('button');del.type='button';del.className='btn btn-ghost program-delete-v0512';del.dataset.deleteDraft=id;del.textContent='Hapus Draft';actions.appendChild(del);del.onclick=()=>deleteDraft(id,item)}const pause=actions.querySelector('[data-program-status="PAUSE"]');if(pause){pause.textContent='Stop Donasi';pause.title='Menutup penerimaan donasi baru. Dana yang sudah masuk tetap tercatat.'}const resume=actions.querySelector('[data-program-status="RESUME"]');if(resume)resume.textContent='Buka Donasi'})}
+function enhanceProgramRows(){
+  const root=$('[data-program-list]');if(!root)return;
+
+  if(!root.parentNode.querySelector('[data-lifecycle-guide-v0515]')){
+    root.insertAdjacentHTML('beforebegin',`<div class="program-lifecycle-guide-v0515" data-lifecycle-guide-v0515><strong>Alur Program:</strong> Draft → Review → Aktif menerima donasi → Stop Donasi → Pelaksanaan & Update Perkembangan → Selesai. <br>Dana yang sudah PAID, termasuk Dana Lebih yang sudah masuk, tetap tercatat walaupun penerimaan donasi dihentikan.</div>`);
+  }
+
+  root.querySelectorAll('.program-item').forEach(item=>{
+    const actions=item.querySelector('.program-actions'),
+          edit=actions?.querySelector('[data-program-edit]');
+    if(!actions||!edit)return;
+
+    const id=edit.dataset.programEdit,
+          statusText=item.querySelector('.status-pill')?.textContent.trim()||'',
+          meta=item.querySelector('.muted.mini');
+
+    if(meta&&!item.querySelector('[data-lifecycle-note-v0515]')){
+      const note=document.createElement('div');
+      note.className='program-lifecycle-note-v0515';
+      note.dataset.lifecycleNoteV0515='1';
+
+      if(/Aktif/i.test(statusText)){
+        note.innerHTML='<strong>Donasi terbuka.</strong> Jika target sudah tercapai, donasi berikutnya tetap tercatat sebagai Dana Lebih sampai Anda memilih <strong>Stop Donasi</strong>.';
+      }else if(/Dijeda/i.test(statusText)){
+        note.innerHTML='<strong>Donasi ditutup.</strong> Dana lama tetap tercatat. Lanjutkan update perkembangan sampai pekerjaan benar-benar selesai.';
+      }else if(/Selesai/i.test(statusText)){
+        note.innerHTML='<strong>Program selesai.</strong> Donasi baru ditutup permanen; riwayat donasi dan perkembangan tetap tersedia.';
+      }else{
+        note.textContent='Program mengikuti alur review KIA sebelum menerima donasi publik.';
+      }
+      meta.insertAdjacentElement('afterend',note);
+    }
+
+    const submit=actions.querySelector('[data-program-submit]');
+    if(submit&&!actions.querySelector('[data-delete-draft]')){
+      const del=document.createElement('button');
+      del.type='button';
+      del.className='btn btn-ghost program-delete-v0512';
+      del.dataset.deleteDraft=id;
+      del.textContent='Hapus Draft';
+      actions.appendChild(del);
+      del.onclick=()=>deleteDraft(id,item);
+    }
+
+    const pause=actions.querySelector('[data-program-status="PAUSE"]');
+    if(pause){
+      pause.textContent='Stop Donasi';
+      pause.title='Menutup penerimaan donasi baru. Dana yang sudah masuk tetap tercatat.';
+      pause.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();lifecycleProgram(id,'STOP_DONATION')};
+    }
+
+    const resume=actions.querySelector('[data-program-status="RESUME"]');
+    if(resume){
+      resume.textContent='Buka Donasi';
+      resume.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();lifecycleProgram(id,'RESUME_DONATION')};
+
+      if(!actions.querySelector('[data-program-complete-v0515]')){
+        const complete=document.createElement('button');
+        complete.type='button';
+        complete.className='btn btn-soft program-complete-v0515';
+        complete.dataset.programCompleteV0515=id;
+        complete.textContent='Tandai Selesai';
+        actions.appendChild(complete);
+        complete.onclick=()=>lifecycleProgram(id,'COMPLETE_PROGRAM');
+      }
+    }
+
+    if(/Selesai/i.test(statusText)&&!actions.querySelector('[data-public-completed-v0515]')){
+      const view=document.createElement('a');
+      view.className='btn btn-soft';
+      view.dataset.publicCompletedV0515='1';
+      view.href=`./program.html?id=${encodeURIComponent(id)}`;
+      view.target='_blank';
+      view.textContent='Lihat Publik';
+      actions.appendChild(view);
+    }
+  })
+}
+
+async function lifecycleProgram(id,action){
+  const config={
+    STOP_DONATION:{
+      title:'Stop penerimaan donasi?',
+      message:'Donasi baru akan ditolak. Dana yang sudah PAID, termasuk Dana Lebih yang sudah masuk, tetap tercatat dan tetap masuk laporan.',
+      confirmText:'Stop Donasi',
+      danger:true
+    },
+    RESUME_DONATION:{
+      title:'Buka kembali donasi?',
+      message:'Program akan kembali menerima donasi baru.',
+      confirmText:'Buka Donasi',
+      danger:false
+    },
+    COMPLETE_PROGRAM:{
+      title:'Tandai program selesai?',
+      message:'Program akan ditutup permanen dari donasi baru. Pastikan perkembangan/laporan akhir sudah dipublikasikan.',
+      confirmText:'Program Selesai',
+      danger:false
+    }
+  }[action];
+
+  const ok=await KiaUI.confirm(config);if(!ok)return;
+
+  KiaUI.showLoading({
+    title:action==='COMPLETE_PROGRAM'?'Menyelesaikan program':'Memperbarui program',
+    message:'Menyimpan status terbaru…'
+  });
+
+  try{
+    await KiaAuth.request(`/api/programs/${encodeURIComponent(id)}/lifecycle`,{
+      method:'POST',
+      body:JSON.stringify({action}),
+      timeout:22000,
+      attempts:1
+    });
+    try{
+      localStorage.removeItem('kia_dashboard_snapshot_v040');
+      localStorage.setItem('kia_public_invalidate_at',String(Date.now()));
+    }catch(_){}
+    KiaUI.hideLoading();
+    KiaUI.toast(
+      action==='STOP_DONATION'?'Penerimaan donasi dihentikan.':
+      action==='RESUME_DONATION'?'Penerimaan donasi dibuka kembali.':
+      'Program ditandai selesai.',
+      {type:'success'}
+    );
+    setTimeout(()=>location.reload(),350);
+  }catch(e){
+    KiaUI.hideLoading();
+    KiaUI.toast(e.message||'Status program belum dapat diperbarui.',{type:'error',duration:5000});
+  }
+}
 async function deleteDraft(id,row){const ok=await KiaUI.confirm({title:'Hapus Draft Program?',message:'Draft akan diarsipkan dan hilang dari daftar Program Saya.',confirmText:'Hapus Draft',danger:true});if(!ok)return;const btn=row.querySelector(`[data-delete-draft="${CSS.escape(id)}"]`);if(btn){btn.disabled=true;btn.textContent='Menghapus…'}try{await KiaAuth.request(`/api/programs/${encodeURIComponent(id)}/delete-draft`,{method:'POST',body:'{}',timeout:22000,attempts:1});try{const k='kia_dashboard_snapshot_v040',snap=JSON.parse(localStorage.getItem(k)||'null');if(Array.isArray(snap?.programs)){snap.programs=snap.programs.filter(p=>p.program_id!==id);localStorage.setItem(k,JSON.stringify(snap))}}catch(_){}row.remove();KiaUI.toast('Draft program dihapus',{type:'success'})}catch(e){if(btn){btn.disabled=false;btn.textContent='Hapus Draft'}KiaUI.toast(e.message||'Draft belum dapat dihapus',{type:'error',duration:5000})}}
 function observePrograms(){const root=$('[data-program-list]');if(!root||root.dataset.phaseCObserver)return;root.dataset.phaseCObserver='1';new MutationObserver(()=>setTimeout(enhanceProgramRows,20)).observe(root,{childList:true,subtree:true});enhanceProgramRows()}
 

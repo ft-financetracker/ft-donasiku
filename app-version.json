@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 514,
+  "build": 515,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Emergency Dashboard Recovery: restores the proven Build 512 dashboard enhancer, defers enhancements until core dashboard boot, removes risky role mutation observation, and keeps safe Build 513 server fixes."
+  "summary": "Program Lifecycle: safe stop/resume donation controls, explicit program completion, public closed-state UI, and server checkout guard while preserving Build 514 stability."
 }

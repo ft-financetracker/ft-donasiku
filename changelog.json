@@ -1,6 +1,26 @@
 [
   {
     "version": "0.5.10",
+    "build": 515,
+    "date": "2026-09-19",
+    "title": "Program Lifecycle",
+    "new": [
+      "Program Saya memiliki alur eksplisit dari penggalangan menuju pelaksanaan dan selesai",
+      "Program PAUSED dapat ditandai Selesai setelah penggalang menutup donasi"
+    ],
+    "improvements": [
+      "Stop Donasi menjelaskan bahwa dana PAID dan Dana Lebih yang sudah masuk tetap tercatat",
+      "Program publik menampilkan Donasi Ditutup atau Program Selesai sesuai status"
+    ],
+    "fixes": [
+      "Checkout server menolak donasi baru ketika program tidak berstatus ACTIVE"
+    ],
+    "security": [
+      "Lifecycle hanya dapat dijalankan pemilik program yang terautentikasi"
+    ]
+  },
+  {
+    "version": "0.5.10",
     "build": 513,
     "date": "2026-09-19",
     "title": "Stability Recovery",
