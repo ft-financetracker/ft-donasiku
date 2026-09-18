@@ -72,10 +72,10 @@
       <p>Badge menghargai jejak aktivitas yang tervalidasi, bukan besarnya nominal. Badge dapat terbuka ketika syarat aktivitasnya terpenuhi dan tidak harus dibaca sebagai ranking kekayaan.</p>
       <div class="badge-rule-grid-v0510">
         <div class="badge-rule-v0510"><strong>Langkah Pertama</strong><small>Donasi pertama berstatus PAID.</small></div>
-        <div class="badge-rule-v0510"><strong>Sahabat Program</strong><small>Mendukung sedikitnya 3 program.</small></div>
+        <div class="badge-rule-v0510"><strong>Sahabat Program</strong><small>Aktif mendukung lebih dari satu program.</small></div>
         <div class="badge-rule-v0510"><strong>Konsisten 3 Bulan</strong><small>Aktif berbagi pada 3 bulan berbeda.</small></div>
         <div class="badge-rule-v0510"><strong>Konsisten 6 Bulan</strong><small>Aktif berbagi pada 6 bulan berbeda.</small></div>
-        <div class="badge-rule-v0510"><strong>Lintas Program</strong><small>Mendukung sedikitnya 5 program.</small></div>
+        <div class="badge-rule-v0510"><strong>Lintas Program</strong><small>Jejak dukungan tersebar pada beberapa program.</small></div>
         <div class="badge-rule-v0510"><strong>Program Tuntas</strong><small>Pernah mendukung program yang telah selesai.</small></div>
       </div>
       <div class="impact-level-note-v0510"><strong>Level Aktivitas</strong><br>Level dihitung engine KIA dari jejak aktivitas tervalidasi seperti donasi PAID, ragam program, periode aktif, dan program tuntas. KIA tidak menggunakan leaderboard nominal.</div>`;

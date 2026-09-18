@@ -1,31 +1,23 @@
-KIA v0.5.10 BUILD 511 — PHASE B DELTA
+KIA v0.5.10 BUILD 511 — PHASE B FINAL / FULL REPLACEMENT
 
-REPLACE GITHUB
+FRONTEND — REPLACE/ADD SESUAI PATH
 assets/css/v0510-patch.css
+assets/css/v0510b-patch.css
 assets/js/donor-impact-v051.js
+assets/js/payment-phase-b-v0510.js
 payment.html
 app-version.json
 changelog.json
 service-worker.js
 
-NEW GITHUB
-assets/css/v0510b-patch.css
-assets/js/payment-phase-b-v0510.js
-
-SERVER NEW
-server/v0510-phase-b.js
-
-SERVER REPLACE
+SERVER — LANGSUNG TIMPA SEMUA
+server/README.md
 server/package.json
-
-SERVER MANUAL PATCH
 server/server.js
-→ follow server/PATCH_SERVER_PHASE_B.md
 
-DO NOT TOUCH
-Apps Script
-Spreadsheet schema
-DOKU env/credentials
-v0.5.9 social engine
-Phase A Room Donasi
-Program lifecycle v0.6.0
+TIDAK ADA
+server/v0510-phase-b.js
+manual patch server
+Apps Script migration
+Spreadsheet schema change
+ENV baru

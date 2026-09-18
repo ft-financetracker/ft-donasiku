@@ -1,38 +1,49 @@
-# Deploy v0.5.10 Build 511 — Phase B
+# Deploy KIA v0.5.10 Build 511 — Phase B FINAL
 
-Phase A harus sudah terpasang.
+Baseline: Phase A v0.5.10 Build 510.
 
-## GitHub root — replace
+## A. GitHub frontend
+Upload isi ZIP ke ROOT repository dan replace file dengan path yang sama.
+
+Frontend yang berubah:
 - `assets/css/v0510-patch.css`
+- `assets/css/v0510b-patch.css`
 - `assets/js/donor-impact-v051.js`
+- `assets/js/payment-phase-b-v0510.js`
 - `payment.html`
 - `app-version.json`
 - `changelog.json`
 - `service-worker.js`
 
-## GitHub root — new
-- `assets/css/v0510b-patch.css`
-- `assets/js/payment-phase-b-v0510.js`
+## B. Server / Render — FULL REPLACEMENT
+Masuk ke folder `server/` di repository.
 
-## Server folder
-Upload NEW:
-- `server/v0510-phase-b.js`
+Timpa langsung 3 file:
+- `server.js`
+- `package.json`
+- `README.md`
 
-Replace:
-- `server/package.json`
+Tidak perlu:
+- edit import
+- copy route manual
+- file module tambahan
+- ubah angka versi manual
 
-Lalu edit `server/server.js` mengikuti:
-- `server/PATCH_SERVER_PHASE_B.md`
+`server.js` di paket ini sudah FULL dan sudah mengandung Phase B.
 
-## Apps Script / Spreadsheet
-Tidak ada perubahan.
+## C. Apps Script / Spreadsheet
+Tidak disentuh.
 Tidak ada migration.
 
-## Setelah deploy
-1. Render harus sukses.
-2. `/health` harus `0.5.10`.
-3. Info Aplikasi harus v0.5.10 Build 511.
-4. Test Dashboard > Dampak Saya.
-5. Test Dashboard > Akun > Profil Akun.
-6. Test payment sandbox sampai auto berubah PAID.
-7. Test Cetak Struk.
+## D. Setelah commit
+Render auto-deploy.
+
+Cek:
+`https://ft-donasiku.onrender.com/health`
+
+Harus menunjukkan:
+- version: `0.5.10`
+
+Lalu cek Info Aplikasi:
+- v0.5.10
+- Build 511
