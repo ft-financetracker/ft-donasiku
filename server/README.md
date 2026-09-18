@@ -1,13 +1,14 @@
-# KIA Backend v0.5.10 Build 512 — Phase C
+# KIA Backend v0.5.10 Build 513 — Stability Recovery
 
 Full replacement server.
 
-Phase C adds:
-- fast checkout shell: browser tidak menunggu DOKU create selesai
-- background DOKU channel preparation
-- safe channel recovery using a new Payment Attempt on the same Donation
-- avatar profile upload
-- draft program archive/delete
+Build 513:
+- returns to the stable payment engine baseline
+- filters ARCHIVED drafts from Dashboard bootstrap
+- confirms draft archive before returning success
+- profile avatar upload
+- Hero & Media + Settings enforced for SUPER_ADMIN server-side
+- Review Admin remains available to PLATFORM_ADMIN / SUPER_ADMIN
 
-Deploy by replacing `server.js`, `package.json`, and `README.md` in the Render server folder.
-No new ENV. No Apps Script migration.
+Deploy: replace `server.js`, `package.json`, and `README.md`.
+No Apps Script migration. No new ENV.
