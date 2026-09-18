@@ -1364,6 +1364,23 @@ app.get('/api/public/donations-feed',async(req,res)=>{
 });
 
 
+
+const phaseCProviderPreparing=new Map();
+async function phaseCPrepareProvider({payment_id,donation_id,provider_invoice_number,gross_amount,payment_method,donor,callbackUrl}){
+  if(!dokuConfigured()) return {ready:false,reason:'DOKU_NOT_CONFIGURED'};
+  if(phaseCProviderPreparing.has(payment_id)) return phaseCProviderPreparing.get(payment_id);
+  const work=(async()=>{
+    try{
+      const created=await dokuCreateCheckout({invoice:provider_invoice_number,amount:gross_amount,paymentMethod:payment_method,donor,callbackUrl});
+      const patch={provider_reference:created.requestId,provider_invoice_number,payment_url:created.paymentUrl,status:'PENDING',expired_at:created.expiredAt,updated_at:new Date().toISOString(),payment_channel:payment_method==='QRIS'?'QRIS':'DOKU_CHECKOUT_VA'};
+      await gas('updatePaymentProviderFast',{payment_id,donation_id,patch},{timeout:12000,attempts:1});
+      return {ready:true,payment_url:created.paymentUrl,expired_at:created.expiredAt,request_id:created.requestId};
+    }catch(err){console.error('PHASE_C_DOKU_PREPARE_FAILED',payment_id,err?.message||err);return {ready:false,reason:'DOKU_CREATE_FAILED'}}
+    finally{phaseCProviderPreparing.delete(payment_id)}
+  })();
+  phaseCProviderPreparing.set(payment_id,work);return work;
+}
+
 app.post('/api/donations/checkout',async(req,res)=>{
   try{
     const program_id=text(req.body.program_id,180);
@@ -1392,36 +1409,23 @@ app.post('/api/donations/checkout',async(req,res)=>{
     const payment_row={payment_id,donation_id,attempt_no:1,provider:'DOKU',payment_method,payment_channel:payment_method==='QRIS'?'QRIS':'VA_CHECKOUT',requested_amount:gross_amount,fee_amount:0,paid_amount:0,provider_reference:'',provider_invoice_number,payment_url:'',va_number:'',qr_data:'',status:'CREATED',expired_at:'',paid_at:'',created_at:now,updated_at:now};
 
     const data=await gas('createDonationPaymentShellFast',{donation_row,payment_row},{timeout:18000,attempts:1});
-    let provider={ready:false,reason:dokuConfigured()?'DOKU_CREATE_PENDING':'DOKU_NOT_CONFIGURED'};
+    const provider={ready:false,reason:dokuConfigured()?'DOKU_PREPARING':'DOKU_NOT_CONFIGURED'};
 
+    // Phase C: jangan tahan browser menunggu DOKU. Shell dikembalikan segera,
+    // sementara provider channel disiapkan di background pada Render.
     if(dokuConfigured()){
-      try{
-        const created=await dokuCreateCheckout({
-          invoice:provider_invoice_number,amount:gross_amount,paymentMethod:payment_method,
-          donor:{id:authUser?.user_id||donation_id,name:donor_name,email:donor_email,phone:donor_phone},callbackUrl
-        });
-        const patch={
-          provider_reference:created.requestId,
-          provider_invoice_number,
-          payment_url:created.paymentUrl,
-          status:'PENDING',
-          expired_at:created.expiredAt,
-          updated_at:new Date().toISOString(),
-          payment_channel:payment_method==='QRIS'?'QRIS':'DOKU_CHECKOUT_VA'
-        };
-        await gas('updatePaymentProviderFast',{payment_id,donation_id,patch},{timeout:12000,attempts:1});
-        provider={ready:true,payment_url:created.paymentUrl,expired_at:created.expiredAt,request_id:created.requestId};
-      }catch(err){
-        console.error('DOKU_CREATE_FAILED',err.message);
-        provider={ready:false,reason:'DOKU_CREATE_FAILED'};
-      }
+      phaseCPrepareProvider({
+        payment_id,donation_id,provider_invoice_number,gross_amount,payment_method,
+        donor:{id:authUser?.user_id||donation_id,name:donor_name,email:donor_email,phone:donor_phone},
+        callbackUrl
+      }).catch(()=>{});
     }
 
     res.status(201).json({
       success:true,
       data:{
         donation:{donation_id,donation_code,program_id,gross_amount,status:'PENDING'},
-        payment:{payment_id,payment_method,payment_channel:payment_row.payment_channel,status:provider.ready?'PENDING':'CREATED',payment_url:provider.payment_url||'',expired_at:provider.expired_at||''},
+        payment:{payment_id,payment_method,payment_channel:payment_row.payment_channel,status:'CREATED',payment_url:'',expired_at:''},
         program:data.program,
         provider_ready:provider.ready,
         provider_reason:provider.reason||'',
@@ -2046,6 +2050,53 @@ app.get('/api/payments/quick-status',async(req,res)=>{
   }
 });
 
+
+
+// ------------------------------------------------------------------
+// v0.5.10 Build 512 — Phase C routes
+// ------------------------------------------------------------------
+app.post('/api/account/avatar',async(req,res)=>{
+  try{
+    const user=await requireUser(req),token_hash=requestTokenHash(req);
+    const file_name=text(req.body?.file_name,140),mime_type=text(req.body?.mime_type,80).toLowerCase(),base64=String(req.body?.base64||'');
+    if(!file_name||!base64) throw httpError(400,'Pilih foto profil terlebih dahulu.','MISSING_MEDIA_DATA');
+    if(!['image/jpeg','image/png','image/webp'].includes(mime_type)) throw httpError(400,'Format foto harus JPG, PNG, atau WEBP.','INVALID_MEDIA_TYPE');
+    const media=await gas('uploadMedia',{file_name,mime_type,base64,media_type:'PROFILE_AVATAR',token_hash},{timeout:22000,attempts:1});
+    const profile=await gas('findOne',{sheet:'02_USER_PROFILES',filters:{user_id:user.user_id}},{timeout:9000,attempts:1});
+    if(!profile?.profile_id) throw httpError(404,'Profil akun tidak ditemukan.','PROFILE_NOT_FOUND');
+    const avatar_url=media?.public_url||media?.thumbnail_url||'';
+    await gas('update',{sheet:'02_USER_PROFILES',idField:'profile_id',id:profile.profile_id,patch:{avatar_url,updated_at:new Date().toISOString()}},{timeout:12000,attempts:1});
+    res.json({success:true,data:{avatar_url}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/programs/:id/delete-draft',async(req,res)=>{
+  try{
+    const user=await requireUser(req),program=await ownedProgram(user,req.params.id);
+    if(!['DRAFT','REJECTED'].includes(String(program.status||'').toUpperCase())) throw httpError(409,'Hanya Draft atau program yang ditolak yang dapat dihapus dari daftar.','INVALID_PROGRAM_STATUS');
+    const patch={status:'ARCHIVED',updated_at:new Date().toISOString()};
+    await gas('update',{sheet:'06_PROGRAMS',idField:'program_id',id:program.program_id,patch},{timeout:12000,attempts:1});
+    clearPublicResponseCache();await audit(user,'ARCHIVE_DRAFT','PROGRAM',program.program_id,{status:program.status},patch);
+    res.json({success:true,data:{program_id:program.program_id,status:'ARCHIVED'}});
+  }catch(e){sendError(res,e)}
+});
+
+app.post('/api/payments/recover-channel',async(req,res)=>{
+  try{
+    const token=verifyCheckoutViewToken(req.body?.token);if(!token) throw httpError(401,'Tautan pembayaran tidak valid atau sudah kedaluwarsa.','INVALID_CHECKOUT_TOKEN');
+    const current=await gas('publicPaymentStatusFast',{donation_id:token.donation_id,payment_id:token.payment_id},{timeout:12000,attempts:1});
+    if(String(current?.donation?.status||'').toUpperCase()==='PAID') return res.json({success:true,data:{already_paid:true,view_token:req.body.token}});
+    if(current?.payment?.payment_url&&!paymentIsTerminal(current?.payment?.status)) return res.json({success:true,data:{already_ready:true,view_token:req.body.token}});
+    const donation=await gas('findOne',{sheet:'08_DONATIONS',filters:{donation_id:token.donation_id}},{timeout:10000,attempts:1});if(!donation) throw httpError(404,'Donasi tidak ditemukan.','DONATION_NOT_FOUND');
+    const payment_method=String(current?.payment?.payment_method||'VIRTUAL_ACCOUNT').toUpperCase();
+    const now=new Date().toISOString(),payment_id=id('pay'),suffix=Date.now().toString(36).toUpperCase().slice(-8),provider_invoice_number=`${String(donation.donation_code||'KIA').replace(/[^A-Za-z0-9]/g,'').slice(0,46)}R${suffix}`.slice(0,60);
+    const payment_row={payment_id,donation_id:donation.donation_id,attempt_no:0,provider:'DOKU',payment_method,payment_channel:payment_method==='QRIS'?'QRIS':'VA_CHECKOUT',requested_amount:Number(donation.gross_amount)||0,fee_amount:0,paid_amount:0,provider_reference:'',provider_invoice_number,payment_url:'',va_number:'',qr_data:'',status:'CREATED',expired_at:'',paid_at:'',created_at:now,updated_at:now};
+    const createdAttempt=await gas('createPaymentAttemptFast',{donation_id:donation.donation_id,payment_row},{timeout:15000,attempts:1});
+    const view_token=signCheckoutViewToken({donation_id:donation.donation_id,payment_id,exp:Date.now()+7*864e5}),callbackUrl=`${PUBLIC_APP_URL}/payment.html?token=${encodeURIComponent(view_token)}`;
+    phaseCPrepareProvider({payment_id,donation_id:donation.donation_id,provider_invoice_number,gross_amount:Number(donation.gross_amount)||0,payment_method,donor:{id:donation.user_id||donation.donation_id,name:donation.donor_name,email:donation.donor_email,phone:donation.donor_phone},callbackUrl}).catch(()=>{});
+    res.status(201).json({success:true,data:{donation:createdAttempt.donation,payment:createdAttempt.payment,provider_ready:false,view_token}});
+  }catch(e){sendError(res,e)}
+});
 
 app.listen(PORT,()=>{
   console.log(`KIA backend ${PORT}`);

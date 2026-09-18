@@ -1,22 +1,13 @@
-# KIA Backend v0.5.10 Build 511
+# KIA Backend v0.5.10 Build 512 — Phase C
 
-Runtime: Node.js / Render.
-Root Directory di Render: `server`.
-Build: `npm install`.
-Start: `node server.js`.
+Full replacement server.
 
-Build 511 sudah mengintegrasikan langsung:
-- Account Profile API
-- Pending Donation / resume payment API
-- Active payment quick-status reconciliation
-- DOKU/webhook/payment engine sebelumnya tetap dipertahankan
+Phase C adds:
+- fast checkout shell: browser tidak menunggu DOKU create selesai
+- background DOKU channel preparation
+- safe channel recovery using a new Payment Attempt on the same Donation
+- avatar profile upload
+- draft program archive/delete
 
-## Cara deploy
-Timpa langsung isi folder `server/` di repository dengan:
-- `README.md`
-- `package.json`
-- `server.js`
-
-Tidak ada module tambahan dan tidak perlu edit `server.js` manual.
-Tidak ada ENV baru.
-Tidak ada perubahan Apps Script / Spreadsheet.
+Deploy by replacing `server.js`, `package.json`, and `README.md` in the Render server folder.
+No new ENV. No Apps Script migration.
