@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 518,
+  "build": 519,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Program Saya Ultra Compact: status badge aligned top-right, title simplified to program name block, and thumbnail moved beside collected/progress values for a more compact card."
+  "summary": "Account Precision & Default Icons: account badges moved to top-right, account form simplified, profile upload made more robust, and Material default avatar icons added."
 }

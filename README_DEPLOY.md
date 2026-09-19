@@ -1,6 +1,6 @@
-# KIA v0.5.10 Build 518 — Program Saya Ultra Compact
+# KIA v0.5.10 Build 519 — Account Precision & Default Icons
 
-Baseline: Build 517.
+Baseline: Build 518 selesai untuk Program Saya.
 
 ## FRONTEND ONLY
 Replace:
@@ -10,15 +10,15 @@ Replace:
 - service-worker.js
 
 ## Fokus patch
-- Badge status dipindah ke pojok kanan atas sejajar title.
-- Title area difokuskan ke nama program.
-- Thumbnail dipindah ke samping blok progress (terkumpul, persen, dsb).
-- Card semakin ringkas.
+- Badge akun dipindah ke pojok kanan atas (jenis akun, role, verifikasi).
+- Kolom read-only yang membingungkan diringkas.
+- Upload foto profil lebih kompatibel.
+- Tambah ikon profil default dari Google Material (bukan emoji).
 
 ## Tidak disentuh
 - server
 - payment
 - landing
-- akun
+- program saya
 - dashboard core
 - Apps Script / Spreadsheet / DOKU

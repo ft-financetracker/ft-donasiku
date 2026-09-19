@@ -1,7 +1,9 @@
-# QA Build 518
+# QA Build 519
 - [ ] Dashboard boot normal
-- [ ] Program Saya card lebih ringkas
-- [ ] Badge status di kanan atas
-- [ ] Nama program jadi fokus header
-- [ ] Thumbnail di samping blok progress
-- [ ] Progress tetap akurat
+- [ ] Program Saya tidak berubah
+- [ ] Akun lebih rapi dan presisi
+- [ ] Badge akun tampil di pojok kanan atas
+- [ ] Row jenis akun / platform role tidak membingungkan lagi
+- [ ] Upload foto profil berhasil
+- [ ] Ikon default material bisa dipilih
+- [ ] Status verifikasi tampil sebagai badge

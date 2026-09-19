@@ -1,6 +1,25 @@
 [
   {
     "version": "0.5.10",
+    "build": 519,
+    "date": "2026-09-19",
+    "title": "Account Precision & Default Icons",
+    "new": [
+      "Akun memiliki badge status di pojok kanan atas (jenis akun, role, status verifikasi)",
+      "Pilihan ikon profil default dari Google Material ditambahkan"
+    ],
+    "improvements": [
+      "Tampilan akun dipadatkan agar tidak membingungkan",
+      "Upload foto profil dibuat lebih kompatibel dengan fallback non-createImageBitmap",
+      "Field read-only yang kurang perlu dipindah dari kolom menjadi badge"
+    ],
+    "fixes": [
+      "Kasus upload foto yang gagal karena kompatibilitas browser/image processing diperbaiki"
+    ],
+    "security": []
+  },
+  {
+    "version": "0.5.10",
     "build": 518,
     "date": "2026-09-19",
     "title": "Program Saya Ultra Compact",
