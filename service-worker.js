@@ -1,6 +1,6 @@
 const APP_VERSION='0.5.10';
-const APP_BUILD=519;
-const CACHE='kia-v0.5.10-b519-account-precision-default-icons';
+const APP_BUILD=520;
+const CACHE='kia-v0.5.10-b520-avatar-identity-sync';
 const SHELL=[
   './','./index.html','./login.html','./register.html','./app.html','./program.html','./program-donations.html','./donations.html','./programs.html','./donate.html','./payment.html','./help.html','./info.html','./offline.html',
   './manifest-v040.json','./manifest.json','./app-version.json','./changelog.json',

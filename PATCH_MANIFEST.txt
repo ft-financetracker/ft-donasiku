@@ -1,14 +1,20 @@
-KIA v0.5.10 Build 517 — PROGRAMS LAYOUT & PROGRESS FIX
+KIA v0.5.10 Build 520 — AVATAR IDENTITY SYNC
 
-REPLACE
+FRONTEND REPLACE
 assets/js/donor-impact-v051.js
+assets/js/program-v0510.js
+assets/js/donation-social-v059.js
+assets/js/program-donations-v058.js
 app-version.json
 changelog.json
 service-worker.js
 
-NO SERVER CHANGE
+SERVER FULL REPLACE
+server/server.js
+server/package.json
+server/README.md
+
 NO APPS SCRIPT
-NO SPREADSHEET
-NO PAYMENT
-NO LANDING
-NO DASHBOARD CORE
+NO SPREADSHEET MIGRATION
+NO PAYMENT/DOKU CHANGE
+NO LANDING CHANGE

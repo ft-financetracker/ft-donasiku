@@ -1,6 +1,26 @@
 [
   {
     "version": "0.5.10",
+    "build": 520,
+    "date": "2026-09-19",
+    "title": "Avatar Identity Sync",
+    "new": [
+      "Ikon profil Material sekarang disimpan pada profil KIA, bukan hanya browser lokal",
+      "Program Penggalang, Donasi Terbaru, Semua Donasi, dan Timeline donor dapat merender avatar Material yang sama"
+    ],
+    "improvements": [
+      "Pilihan ikon lama dari Build 519 otomatis dimigrasikan ke profil server saat avatar server masih kosong",
+      "Pergantian foto atau ikon membersihkan cache publik/social agar perubahan lebih cepat terlihat"
+    ],
+    "fixes": [
+      "Memperbaiki avatar Program yang masih menampilkan inisial setelah pengguna memilih ikon profil"
+    ],
+    "security": [
+      "Ikon Material dibatasi whitelist server dan tetap membutuhkan session login"
+    ]
+  },
+  {
+    "version": "0.5.10",
     "build": 519,
     "date": "2026-09-19",
     "title": "Account Precision & Default Icons",

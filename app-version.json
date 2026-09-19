@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 519,
+  "build": 520,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Account Precision & Default Icons: account badges moved to top-right, account form simplified, profile upload made more robust, and Material default avatar icons added."
+  "summary": "Avatar Identity Sync: Material profile icons and uploaded photos are persisted to the user profile and rendered consistently across Account, Program owner, program donation feeds, and donor social timeline."
 }

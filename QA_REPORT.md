@@ -1,9 +1,12 @@
-# QA Build 519
+# QA Build 520
 - [ ] Dashboard boot normal
 - [ ] Program Saya tidak berubah
-- [ ] Akun lebih rapi dan presisi
-- [ ] Badge akun tampil di pojok kanan atas
-- [ ] Row jenis akun / platform role tidak membingungkan lagi
-- [ ] Upload foto profil berhasil
-- [ ] Ikon default material bisa dipilih
-- [ ] Status verifikasi tampil sebagai badge
+- [ ] Material icon tersimpan setelah refresh
+- [ ] Pilihan ikon Build 519 lama termigrasi otomatis
+- [ ] Program owner merender material icon, bukan broken image / initials
+- [ ] Program recent donation merender material icon
+- [ ] Semua Donasi merender material icon
+- [ ] Timeline social merender material icon
+- [ ] Upload foto masih bekerja
+- [ ] Server cache public/social dibersihkan setelah avatar berubah
+- [ ] Payment, DOKU, landing tidak berubah

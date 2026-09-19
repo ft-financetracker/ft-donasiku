@@ -32,7 +32,8 @@
   function writeQueue(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q))}catch{}}
   function initials(name){const p=String(name||'Hamba Allah').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'H')+(p[1]?.[0]||'')).toUpperCase()}
   function frameCode(profile){return String(profile?.frame_code||'DEFAULT').toLowerCase()}
-  function avatar(profile,label){const url=String(profile?.avatar_url||'').trim();return `<div class="social-profile-avatar frame-${esc(frameCode(profile))}">${url?`<img src="${esc(url)}" alt="">`:`<span>${esc(initials(label))}</span>`}</div>`}
+  function materialAvatarV0520(v){const s=String(v||'').trim();return s.startsWith('material:')?s.slice(9):''}
+  function avatar(profile,label){const url=String(profile?.avatar_url||'').trim(),mi=materialAvatarV0520(url);return `<div class="social-profile-avatar frame-${esc(frameCode(profile))}">${mi?`<span class="material-symbols-outlined">${esc(mi)}</span>`:url?`<img src="${esc(url)}" alt="">`:`<span>${esc(initials(label))}</span>`}</div>`}
   function ensure(){
     if(overlay)return;
     overlay=document.createElement('div');
