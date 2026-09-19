@@ -2117,6 +2117,25 @@ app.get('/api/payments/quick-status',async(req,res)=>{
 // v0.5.10 BUILD 513 — Stability Recovery
 // Avatar profile + confirmed draft archive
 // ------------------------------------------------------------------
+const MATERIAL_AVATAR_ICONS_V0520=new Set(['volunteer_activism','local_florist','directions_bus','school','account_balance','eco','flight','favorite']);
+app.post('/api/account/avatar-icon',async(req,res)=>{
+  try{
+    const user=await requireUser(req);
+    const icon=text(req.body?.icon,80);
+    if(!MATERIAL_AVATAR_ICONS_V0520.has(icon)) throw httpError(400,'Ikon profil tidak tersedia.','INVALID_AVATAR_ICON');
+    let profile=await gas('findOne',{sheet:'02_USER_PROFILES',filters:{user_id:user.user_id}},{timeout:9000,attempts:1});
+    const now=new Date().toISOString(),avatar_url=`material:${icon}`;
+    if(profile?.profile_id){
+      await gas('update',{sheet:'02_USER_PROFILES',idField:'profile_id',id:profile.profile_id,patch:{avatar_url,updated_at:now}},{timeout:12000,attempts:1});
+    }else{
+      profile={profile_id:id('prf'),user_id:user.user_id,address:'',avatar_url,identity_status:'UNVERIFIED',identity_type:'',identity_number:'',created_at:now,updated_at:now};
+      await gas('insert',{sheet:'02_USER_PROFILES',row:profile},{timeout:14000,attempts:1});
+    }
+    clearPublicResponseCache();socialResponseCache.clear();
+    res.json({success:true,data:{avatar_url,avatar_type:'MATERIAL_ICON',icon}});
+  }catch(e){sendError(res,e)}
+});
+
 app.post('/api/account/avatar',async(req,res)=>{
   try{
     const user=await requireUser(req),token_hash=requestTokenHash(req);
@@ -2129,7 +2148,8 @@ app.post('/api/account/avatar',async(req,res)=>{
     if(!profile?.profile_id) throw httpError(404,'Profil akun tidak ditemukan.','PROFILE_NOT_FOUND');
     const avatar_url=media?.public_url||media?.thumbnail_url||'';
     await gas('update',{sheet:'02_USER_PROFILES',idField:'profile_id',id:profile.profile_id,patch:{avatar_url,updated_at:new Date().toISOString()}},{timeout:12000,attempts:1});
-    res.json({success:true,data:{avatar_url}});
+    clearPublicResponseCache();socialResponseCache.clear();
+    res.json({success:true,data:{avatar_url,avatar_type:'IMAGE'}});
   }catch(e){sendError(res,e)}
 });
 

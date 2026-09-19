@@ -1,15 +1,13 @@
-# KIA Backend v0.5.10 Build 515 — Program Lifecycle
+# KIA Backend v0.5.10 Build 520 — Avatar Identity Sync
 
-Full replacement server based on stable Build 514 backend.
+Full replacement server based on stable Build 515.
 
-Build 515 changes only Program Lifecycle:
-- POST /api/programs/:id/lifecycle
-  - STOP_DONATION: ACTIVE -> PAUSED
-  - RESUME_DONATION: PAUSED -> ACTIVE
-  - COMPLETE_PROGRAM: PAUSED -> COMPLETED
-- checkout rejects new donations unless program status is ACTIVE
-- existing PAID donations and Dana Lebih remain untouched
+Build 520 only adds profile avatar synchronization:
+- POST `/api/account/avatar-icon`
+- Material icon selection stored in existing `02_USER_PROFILES.avatar_url` as `material:<icon>`
+- uploaded photo continues using normal URL
+- public and social response caches are cleared after avatar change
 
-No Apps Script migration.
 No Spreadsheet schema change.
-No DOKU/Payment engine changes.
+No Apps Script migration.
+No Payment/DOKU change.
