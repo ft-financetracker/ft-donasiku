@@ -1,18 +1,7 @@
-# QA Build 517
-
-## Regression
+# QA Build 518
 - [ ] Dashboard boot normal
-- [ ] Lifecycle Build 515 tetap bekerja
-- [ ] Payment tidak berubah
-- [ ] Landing tidak berubah
-- [ ] Account tidak berubah
-
-## Program Saya
-- [ ] Thumbnail tampil di kiri
-- [ ] Card lebih besar / readable
-- [ ] Struktur ringkas 3 blok
-- [ ] Raised/credited tampil benar
-- [ ] Persentase tampil benar
-- [ ] Dana Lebih tampil jika ada
-- [ ] Sisa target tampil jika belum penuh
-- [ ] Progress 0 palsu tidak terjadi lagi
+- [ ] Program Saya card lebih ringkas
+- [ ] Badge status di kanan atas
+- [ ] Nama program jadi fokus header
+- [ ] Thumbnail di samping blok progress
+- [ ] Progress tetap akurat

@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 517,
+  "build": 518,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Program Saya Layout & Progress Fix: larger card with left-aligned thumbnail, compact 3-block structure, and fundraising progress now falls back to public program detail so collected/overfunded values stay accurate."
+  "summary": "Program Saya Ultra Compact: status badge aligned top-right, title simplified to program name block, and thumbnail moved beside collected/progress values for a more compact card."
 }

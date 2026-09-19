@@ -1,6 +1,22 @@
 [
   {
     "version": "0.5.10",
+    "build": 518,
+    "date": "2026-09-19",
+    "title": "Program Saya Ultra Compact",
+    "new": [
+      "Badge status dipindah ke pojok kanan atas sejajar header",
+      "Thumbnail dipindah ke samping blok progress agar card lebih ringkas"
+    ],
+    "improvements": [
+      "Title area kini fokus ke nama program dan meta singkat",
+      "Struktur card semakin ringkas: header, progress+thumbnail, actions"
+    ],
+    "fixes": [],
+    "security": []
+  },
+  {
+    "version": "0.5.10",
     "build": 517,
     "date": "2026-09-19",
     "title": "Program Saya Layout & Progress Fix",

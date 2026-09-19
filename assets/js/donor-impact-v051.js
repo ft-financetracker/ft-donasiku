@@ -34,13 +34,17 @@ body>header{background:#fff;border-bottom:1px solid rgba(20,62,48,.10);box-shado
 .program-delete-v0512{border-color:#efc9c5!important;color:#9a443e!important}.program-actions [data-program-status="PAUSE"]{border-color:#e6d7af}.program-actions [data-program-status="RESUME"]{background:#edf8f3}.program-lifecycle-note-v0515{margin-top:8px;padding:9px 10px;border-radius:10px;background:#f7faf8;border:1px solid var(--border);font-size:9px;line-height:1.5;color:var(--muted)}.program-lifecycle-guide-v0515{margin:0 0 12px;padding:11px 12px;border:1px solid #dce8e3;border-radius:12px;background:#f8fbf9;font-size:9px;line-height:1.55;color:#53625c}.program-lifecycle-guide-v0515 strong{color:var(--text)}.program-complete-v0515{border-color:#b9d9cd!important;background:#eef8f4!important;color:var(--primary)!important}
 .program-lifecycle-guide-v0515{padding:10px 12px!important;margin-bottom:10px!important;font-size:9px!important}
 .program-item{padding:14px 15px!important;border-radius:14px!important}
-.program-item__top{display:grid!important;grid-template-columns:94px minmax(0,1fr)!important;gap:14px!important;align-items:start!important}
-.program-item__top>img{order:-1!important;width:94px!important;height:70px!important;border-radius:10px!important;object-fit:cover!important;flex:0 0 auto!important}
-.program-item__top h3{margin:4px 0 4px!important;font-size:18px!important;line-height:1.24!important}
+.program-item__top{display:block!important}
+.program-item__top>img{display:none!important}
+.program-head-v0518{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.program-title-wrap-v0518{min-width:0;flex:1 1 auto}
+.program-item__top h3{margin:0 0 4px!important;font-size:18px!important;line-height:1.24!important}
 .program-item__top .muted.mini{margin:0!important;font-size:10px!important;line-height:1.45!important}
-.program-item__top .status-pill{margin-bottom:2px!important}
+.program-head-v0518 .status-pill{margin:0!important;flex:0 0 auto;white-space:nowrap}
 .program-lifecycle-note-v0515{display:none!important}
 .program-progress-v0516{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.program-progress-grid-v0518{display:grid;grid-template-columns:minmax(0,1fr) 94px;gap:14px;align-items:start}
+.program-progress-media-v0518 img{width:94px;height:70px;border-radius:10px;object-fit:cover;display:block}
 .program-progress-head-v0516{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
 .program-progress-money-v0516{min-width:0}
 .program-progress-money-v0516 span{display:block;color:var(--muted);font-size:9px;margin-bottom:3px}
@@ -58,13 +62,16 @@ body>header{background:#fff;border-bottom:1px solid rgba(20,62,48,.10);box-shado
 .program-actions{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin-top:10px!important}
 .program-actions .btn{min-height:35px!important;padding:0 12px!important;font-size:10px!important;border-radius:10px!important}
 @media(max-width:720px){
-  .program-item__top{grid-template-columns:78px minmax(0,1fr)!important;gap:12px!important}
-  .program-item__top>img{width:78px!important;height:60px!important}
   .program-item__top h3{font-size:16px!important}
+  .program-progress-grid-v0518{grid-template-columns:minmax(0,1fr) 78px}
+  .program-progress-media-v0518 img{width:78px;height:60px}
   .program-progress-money-v0516 strong,.program-progress-percent-v0516 strong{font-size:18px!important}
 }
 @media(max-width:560px){
   .program-item{padding:12px!important}
+  .program-head-v0518{gap:8px}
+  .program-progress-grid-v0518{grid-template-columns:1fr 68px;gap:10px}
+  .program-progress-media-v0518 img{width:68px;height:52px}
   .program-progress-head-v0516{align-items:flex-start!important}
   .program-progress-foot-v0516{align-items:flex-start;flex-direction:column;gap:5px}
 }
@@ -173,27 +180,33 @@ function stageLabelV0516(status,pct){
   if(status==='ACTIVE')return'Penggalangan Aktif';
   return status||'Program';
 }
-function progressHtmlV0517(d){
+function progressHtmlV0517(d,thumb=''){
   const stage=stageLabelV0516(d.status,d.pct);
   return `
-    <div class="program-progress-head-v0516">
-      <div class="program-progress-money-v0516">
-        <span>Terkumpul</span>
-        <strong>${idr(d.credited)} <small>/ ${idr(d.target)}</small></strong>
+    <div class="program-progress-grid-v0518">
+      <div>
+        <div class="program-progress-head-v0516">
+          <div class="program-progress-money-v0516">
+            <span>Terkumpul</span>
+            <strong>${idr(d.credited)} <small>/ ${idr(d.target)}</small></strong>
+          </div>
+          <div class="program-progress-percent-v0516">
+            <strong>${d.pct}%</strong>
+            <small>progress dana</small>
+          </div>
+        </div>
+        <div class="program-progress-bar-v0516"><i style="width:${d.pct}%"></i></div>
+        <div class="program-progress-foot-v0516">
+          <span class="program-stage-v0516">${esc(stage)}</span>
+          ${d.excess>0?`<span class="excess">Dana Lebih ${idr(d.excess)}</span>`:`<span>Sisa target ${idr(Math.max(0,d.target-d.credited))}</span>`}
+        </div>
       </div>
-      <div class="program-progress-percent-v0516">
-        <strong>${d.pct}%</strong>
-        <small>progress dana</small>
-      </div>
-    </div>
-    <div class="program-progress-bar-v0516"><i style="width:${d.pct}%"></i></div>
-    <div class="program-progress-foot-v0516">
-      <span class="program-stage-v0516">${esc(stage)}</span>
-      ${d.excess>0?`<span class="excess">Dana Lebih ${idr(d.excess)}</span>`:`<span>Sisa target ${idr(Math.max(0,d.target-d.credited))}</span>`}
+      ${thumb?`<div class="program-progress-media-v0518"><img src="${esc(thumb)}" alt="Thumbnail Program"></div>`:''}
     </div>`;
 }
 function renderProgramProgressV0516(item,id,forceData=null){
   const d=forceData||programProgressDataV0516(id); if(!d)return;
+  const thumb=item.querySelector('.program-item__top>img')?.getAttribute('src')||'';
   let box=item.querySelector('[data-program-progress-v0516]');
   if(!box){
     box=document.createElement('div');
@@ -202,7 +215,7 @@ function renderProgramProgressV0516(item,id,forceData=null){
     const actions=item.querySelector('.program-actions');
     item.insertBefore(box,actions||null);
   }
-  box.innerHTML=progressHtmlV0517(d);
+  box.innerHTML=progressHtmlV0517(d,thumb);
 }
 const inflightProgressV0517=new Map();
 async function syncProgramProgressV0517(item,id){
@@ -242,6 +255,21 @@ function enhanceProgramRows(){
     const id=edit.dataset.programEdit,
           statusText=item.querySelector('.status-pill')?.textContent.trim()||'',
           meta=item.querySelector('.muted.mini');
+
+    const top=item.querySelector('.program-item__top'),
+          title=top?.querySelector('h3'),
+          badge=top?.querySelector('.status-pill');
+    if(top && title && !top.querySelector('.program-head-v0518')){
+      const head=document.createElement('div');
+      head.className='program-head-v0518';
+      const wrap=document.createElement('div');
+      wrap.className='program-title-wrap-v0518';
+      title.parentNode.insertBefore(head,title);
+      head.appendChild(wrap);
+      wrap.appendChild(title);
+      if(meta) wrap.appendChild(meta);
+      if(badge) head.appendChild(badge);
+    }
 
     renderProgramProgressV0516(item,id);
     syncProgramProgressV0517(item,id);
