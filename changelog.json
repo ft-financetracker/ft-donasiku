@@ -1,6 +1,24 @@
 [
   {
     "version": "0.5.10",
+    "build": 517,
+    "date": "2026-09-19",
+    "title": "Program Saya Layout & Progress Fix",
+    "new": [
+      "Card Program Saya kini memakai layout lebih besar dengan thumbnail di kiri dan 3 blok utama: header, progress, actions",
+      "Progress card kini memakai fallback cache detail program dan fetch ke public program detail agar nominal terkumpul, persentase, dan Dana Lebih tetap akurat"
+    ],
+    "improvements": [
+      "Font progress, persentase, dan target diperbesar agar lebih mudah dibaca penggalang",
+      "Catatan lifecycle verbose di dalam card dihilangkan supaya card tetap ringkas"
+    ],
+    "fixes": [
+      "Kasus progress 0 pada Program Saya diperbaiki ketika snapshot dashboard belum memuat raised amount terbaru"
+    ],
+    "security": []
+  },
+  {
+    "version": "0.5.10",
     "build": 516,
     "date": "2026-09-19",
     "title": "Program Progress Compact",

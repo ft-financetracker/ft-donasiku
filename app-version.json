@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 516,
+  "build": 517,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Program Progress Compact: Program Saya now shows fundraising progress, target, percentage, remaining target/Dana Lebih, and lifecycle stage in a more compact card without changing dashboard boot or backend."
+  "summary": "Program Saya Layout & Progress Fix: larger card with left-aligned thumbnail, compact 3-block structure, and fundraising progress now falls back to public program detail so collected/overfunded values stay accurate."
 }

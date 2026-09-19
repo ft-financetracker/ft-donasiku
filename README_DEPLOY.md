@@ -1,35 +1,37 @@
-# KIA v0.5.10 Build 516 — Program Progress Compact
+# KIA v0.5.10 Build 517 — Program Saya Layout & Progress Fix
 
-Baseline: Build 515 berhasil/stabil.
+Baseline: Build 516 stabil.
 
-## FRONTEND ONLY — replace 4 file
+## FRONTEND ONLY
+Replace:
 - assets/js/donor-impact-v051.js
 - app-version.json
 - changelog.json
 - service-worker.js
 
 ## SERVER
-TIDAK DIUBAH. Jangan upload folder server.
+Tidak diubah.
+
+## Fokus patch
+- Thumbnail card Program Saya dipindah ke kiri.
+- Card diperbesar dan dirapikan agar tidak terlihat terlalu kecil.
+- Struktur card dipadatkan menjadi 3 blok utama: header, progress, actions.
+- Progress tidak lagi hanya mengandalkan dashboard snapshot; ada fallback ke cache detail program dan fetch public detail program.
 
 ## Tidak disentuh
-- app.html
 - dashboard-v040.js
-- payment
+- app.html
 - landing
 - akun
-- Program public renderer
+- payment
+- room donasi
 - Apps Script
 - Spreadsheet
 - DOKU
 
 ## Test
-1. Dashboard harus boot seperti Build 515.
-2. Buka Program Saya.
-3. Card menampilkan:
-   - Terkumpul / Target
-   - persentase
-   - progress bar
-   - Sisa Target atau Dana Lebih
-   - Tahap program
-4. Stop/Buka Donasi tetap bekerja.
-5. Card lebih pendek/compact di desktop, tablet, mobile.
+1. Dashboard tetap boot normal.
+2. Program Saya tampil dengan gambar di kiri.
+3. Card terlihat lebih besar dan ringkas.
+4. Nominal progress tidak lagi 0 jika program sebenarnya sudah penuh / overfunding.
+5. Dana Lebih tampil jika raw > target.
