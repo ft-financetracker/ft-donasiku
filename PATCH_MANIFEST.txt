@@ -1,23 +1,14 @@
-KIA v0.5.10 Build 515 — PROGRAM LIFECYCLE
+KIA v0.5.10 Build 516 — PROGRAM PROGRESS COMPACT
 
-FRONTEND REPLACE
+REPLACE
 assets/js/donor-impact-v051.js
-assets/js/program-v0510.js
 app-version.json
 changelog.json
 service-worker.js
 
-SERVER FULL REPLACE
-server/server.js
-server/package.json
-server/README.md
-
-UNCHANGED / LOCK
-app.html
-assets/js/dashboard-v040.js
-assets/js/public-v0510.js
-payment.html
-assets/js/payment-v058.js
-Apps Script
-Spreadsheet
-DOKU
+NO SERVER CHANGE
+NO APPS SCRIPT
+NO SPREADSHEET
+NO PAYMENT
+NO LANDING
+NO DASHBOARD CORE

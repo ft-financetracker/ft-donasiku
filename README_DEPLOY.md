@@ -1,36 +1,35 @@
-# KIA v0.5.10 Build 515 — Program Lifecycle
+# KIA v0.5.10 Build 516 — Program Progress Compact
 
-Baseline wajib: Build 514 STABLE.
+Baseline: Build 515 berhasil/stabil.
 
-## Frontend — replace only
+## FRONTEND ONLY — replace 4 file
 - assets/js/donor-impact-v051.js
-- assets/js/program-v0510.js
 - app-version.json
 - changelog.json
 - service-worker.js
 
-## Server — full replacement
-Masuk folder `server/` lalu timpa:
-- server.js
-- package.json
-- README.md
+## SERVER
+TIDAK DIUBAH. Jangan upload folder server.
 
-## Jangan disentuh
+## Tidak disentuh
 - app.html
 - dashboard-v040.js
 - payment
-- landing/public-v0510.js
-- Account/Profile
-- Room Donasi
+- landing
+- akun
+- Program public renderer
 - Apps Script
 - Spreadsheet
-- DOKU ENV / credentials
+- DOKU
 
 ## Test
-1. Dashboard harus tetap boot normal.
-2. Program ACTIVE → Stop Donasi → status PAUSED.
-3. Program PAUSED → Buka Donasi → ACTIVE.
-4. Program PAUSED → Tandai Selesai → COMPLETED.
-5. Program PAUSED/COMPLETED tidak dapat membuat checkout baru.
-6. Donasi PAID lama dan Dana Lebih tetap tampil di transparansi.
-7. Program COMPLETED tetap dapat dibuka publik tetapi tombol donasi tertutup.
+1. Dashboard harus boot seperti Build 515.
+2. Buka Program Saya.
+3. Card menampilkan:
+   - Terkumpul / Target
+   - persentase
+   - progress bar
+   - Sisa Target atau Dana Lebih
+   - Tahap program
+4. Stop/Buka Donasi tetap bekerja.
+5. Card lebih pendek/compact di desktop, tablet, mobile.

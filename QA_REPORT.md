@@ -1,18 +1,20 @@
-# QA Build 515
+# QA Build 516
 
 ## Regression
-- [ ] Dashboard Build 514 tetap boot.
-- [ ] Dampak Saya tetap stabil.
-- [ ] Akun tetap stabil.
+- [ ] Dashboard boot normal.
+- [ ] Build 515 lifecycle tetap bekerja.
 - [ ] Payment tidak berubah.
 - [ ] Landing tidak berubah.
+- [ ] Account tidak berubah.
 
-## Program Lifecycle
-- [ ] ACTIVE -> Stop Donasi -> PAUSED.
-- [ ] PAUSED -> Buka Donasi -> ACTIVE.
-- [ ] PAUSED -> Tandai Selesai -> COMPLETED.
-- [ ] COMPLETED tidak punya tombol menerima donasi.
-- [ ] PAUSED tidak punya tombol menerima donasi.
-- [ ] Direct checkout ke program PAUSED/COMPLETED ditolak server.
-- [ ] Dana PAID lama tidak berubah.
-- [ ] Dana Lebih lama tidak berubah.
+## Program Saya
+- [ ] Raised amount tampil benar.
+- [ ] Target amount tampil benar.
+- [ ] Persentase maksimal 100%.
+- [ ] Progress bar sesuai persentase.
+- [ ] Jika melebihi target, Dana Lebih tampil.
+- [ ] Jika belum penuh, Sisa Target tampil.
+- [ ] Tahap program sesuai status.
+- [ ] Card lebih compact.
+- [ ] Banyak card tetap mudah discan.
+- [ ] Tablet/mobile tidak overflow.

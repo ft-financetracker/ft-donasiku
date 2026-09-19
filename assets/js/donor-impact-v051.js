@@ -32,6 +32,36 @@ body>header{background:#fff;border-bottom:1px solid rgba(20,62,48,.10);box-shado
 .pending-card-v0512{padding:16px!important}.pending-head-v0512{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.pending-head-v0512 h3{margin:0}.pending-head-v0512 p{margin:3px 0 0;font-size:9px}.pending-list-v0512{display:grid;gap:7px;max-height:290px;overflow-y:auto}.pending-item-v0512{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}.pending-item-v0512 h4{margin:0;font-size:11px}.pending-meta-v0512{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.pending-amount-v0512{text-align:right}.pending-amount-v0512 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:18px}.pending-amount-v0512 small{color:var(--muted);font-size:8px}.pending-item-v0512 .btn{min-height:35px;padding:0 10px;font-size:10px;width:100%}
 .account-overview-v0512{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}.avatar-card-v0512{display:grid;justify-items:center;gap:9px;padding:16px;border:1px solid var(--border);border-radius:15px;background:#f8fbf9}.avatar-v0512{width:112px;height:112px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 20px rgba(29,67,53,.12);display:grid;place-items:center;background:#e7f2ee;color:var(--primary);font-size:30px;font-weight:900}.avatar-v0512 img{width:100%;height:100%;object-fit:cover}.avatar-card-v0512 label{cursor:pointer}.account-verify-card-v0512{margin-top:14px!important}.account-profile-form-v0512{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}.account-profile-form-v0512 .form-grid{margin-top:10px}.account-badges-v0512{margin-top:14px;padding:15px;border:1px solid var(--border);border-radius:14px;background:#fbfdfc}.account-badges-list-v0512{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.account-badge-choice-v0512{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:9px;font-weight:800;cursor:pointer}.account-badge-choice-v0512.is-selected{border-color:#72b59d;background:#eaf7f2;color:var(--primary)}
 .program-delete-v0512{border-color:#efc9c5!important;color:#9a443e!important}.program-actions [data-program-status="PAUSE"]{border-color:#e6d7af}.program-actions [data-program-status="RESUME"]{background:#edf8f3}.program-lifecycle-note-v0515{margin-top:8px;padding:9px 10px;border-radius:10px;background:#f7faf8;border:1px solid var(--border);font-size:9px;line-height:1.5;color:var(--muted)}.program-lifecycle-guide-v0515{margin:0 0 12px;padding:11px 12px;border:1px solid #dce8e3;border-radius:12px;background:#f8fbf9;font-size:9px;line-height:1.55;color:#53625c}.program-lifecycle-guide-v0515 strong{color:var(--text)}.program-complete-v0515{border-color:#b9d9cd!important;background:#eef8f4!important;color:var(--primary)!important}
+.program-lifecycle-guide-v0515{padding:9px 11px!important;margin-bottom:9px!important;font-size:8px!important}
+.program-item{padding:12px 13px!important;border-radius:12px!important}
+.program-item__top{gap:12px!important;align-items:flex-start!important}
+.program-item__top h3{margin:5px 0 3px!important;font-size:14px!important;line-height:1.25!important}
+.program-item__top .muted.mini{margin:0!important;font-size:8px!important}
+.program-item__top>img{width:68px!important;height:50px!important;border-radius:9px!important;flex:0 0 auto!important}
+.program-actions{gap:6px!important;margin-top:9px!important}
+.program-actions .btn{min-height:34px!important;padding:0 11px!important;font-size:9px!important;border-radius:10px!important}
+.program-lifecycle-note-v0515{margin-top:6px!important;padding:7px 9px!important;font-size:8px!important;line-height:1.4!important;border-radius:9px!important}
+.program-progress-v0516{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.program-progress-head-v0516{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.program-progress-money-v0516{min-width:0}
+.program-progress-money-v0516 span{display:block;color:var(--muted);font-size:8px;margin-bottom:2px}
+.program-progress-money-v0516 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:15px;line-height:1.15}
+.program-progress-percent-v0516{flex:0 0 auto;text-align:right}
+.program-progress-percent-v0516 strong{display:block;color:var(--primary);font-family:var(--font-number);font-size:15px;line-height:1.1}
+.program-progress-percent-v0516 small{display:block;color:var(--muted);font-size:7px;margin-top:2px}
+.program-progress-bar-v0516{height:6px;margin-top:7px;border-radius:999px;background:#e9efec;overflow:hidden}
+.program-progress-bar-v0516 i{display:block;height:100%;border-radius:inherit;background:var(--primary)}
+.program-progress-foot-v0516{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;color:var(--muted);font-size:7.5px}
+.program-progress-foot-v0516 .excess{color:#916515;font-weight:800}
+.program-stage-v0516{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:#eef7f3;color:var(--primary);font-size:7.5px;font-weight:850}
+.program-stage-v0516::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+@media(max-width:620px){
+  .program-item{padding:11px!important}
+  .program-item__top>img{width:60px!important;height:46px!important}
+  .program-progress-head-v0516{align-items:center}
+  .program-progress-money-v0516 strong,.program-progress-percent-v0516 strong{font-size:14px}
+  .program-progress-foot-v0516{align-items:flex-start;flex-direction:column;gap:4px}
+}
 .supporter-admin-list-v0512{display:grid;gap:8px;margin-top:12px}.supporter-admin-row-v0512{display:grid;grid-template-columns:1fr 1.5fr 1.5fr auto;gap:8px;align-items:center}.supporter-admin-row-v0512 input{min-height:40px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font:inherit}.supporter-admin-row-v0512 button{min-height:40px}
 @media(max-width:820px){.badge-level-list-v0512{grid-template-columns:1fr 1fr}.mission-grid-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr auto}.pending-amount-v0512{grid-column:2;grid-row:1;text-align:right}.pending-item-v0512 .btn{grid-column:1/-1;width:auto;justify-self:start}.account-overview-v0512{grid-template-columns:1fr}.avatar-card-v0512{grid-template-columns:auto 1fr;justify-items:start;align-items:center}.avatar-v0512{width:86px;height:86px}.supporter-admin-row-v0512{grid-template-columns:1fr 1fr}.supporter-admin-row-v0512 button{grid-column:1/-1;justify-self:start}}
 @media(max-width:540px){.badge-level-list-v0512{grid-template-columns:1fr}.pending-item-v0512{grid-template-columns:1fr}.pending-amount-v0512{grid-column:auto;grid-row:auto;text-align:left}.app-hero{padding:15px 12px}.impact-level{min-width:0!important;width:100%}.avatar-card-v0512{grid-template-columns:1fr;justify-items:center}.supporter-admin-row-v0512{grid-template-columns:1fr}}
@@ -78,6 +108,61 @@ async function fileToAvatar(file){const bmp=await createImageBitmap(file),side=M
 async function uploadAvatar(e){const file=e.target.files?.[0];e.target.value='';if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){KiaUI.toast('Format foto harus JPG, PNG, atau WEBP.',{type:'error'});return}if(file.size>2*1024*1024){KiaUI.toast('Ukuran foto maksimal 2 MB.',{type:'error'});return}try{KiaUI.showLoading({title:'Mengganti foto profil',message:'Mengoptimalkan foto…'});const payload=await fileToAvatar(file),r=await KiaAuth.request('/api/account/avatar',{method:'POST',body:JSON.stringify(payload),timeout:30000,attempts:1});renderAvatar(r.data?.avatar_url,KiaAuth.getUser()?.full_name);KiaUI.toast('Foto profil diperbarui',{type:'success'})}catch(err){KiaUI.toast(err.message||'Foto profil gagal diubah',{type:'error'})}finally{KiaUI.hideLoading()}}
 function renderAccountBadges(){const root=$('[data-account-badges-list]');if(!root)return;const selected=localStorage.getItem(badgeStore())||'';root.innerHTML=lastBadges.length?lastBadges.map(b=>`<button type="button" class="account-badge-choice-v0512 ${selected===b.code?'is-selected':''}" data-display-badge="${esc(b.code)}"><span class="material-symbols-outlined">${esc(b.icon||'workspace_premium')}</span>${esc(b.label)}</button>`).join(''):'<span class="muted mini">Belum ada lencana yang dapat dipilih.</span>';$$('[data-display-badge]',root).forEach(b=>b.onclick=()=>{localStorage.setItem(badgeStore(),b.dataset.displayBadge);renderAccountBadges();KiaUI.toast('Lencana tampilan dipilih',{type:'success'})})}
 
+
+function programSnapshotV0516(){
+  try{
+    const snap=JSON.parse(localStorage.getItem('kia_dashboard_snapshot_v040')||'null');
+    return Array.isArray(snap?.programs)?snap.programs:[];
+  }catch(_){return[]}
+}
+function programProgressDataV0516(id){
+  const p=programSnapshotV0516().find(x=>String(x.program_id)===String(id));
+  if(!p)return null;
+  const raw=Math.max(0,Number(p.raised_amount)||0);
+  const target=Math.max(0,Number(p.target_amount)||0);
+  const credited=target>0?Math.min(raw,target):raw;
+  const excess=target>0?Math.max(0,raw-target):0;
+  const pct=target>0?Math.min(100,Math.round((credited/target)*100)):0;
+  return{raw,target,credited,excess,pct,status:String(p.status||'').toUpperCase()}
+}
+function stageLabelV0516(status,pct){
+  if(status==='COMPLETED')return'Selesai';
+  if(status==='PAUSED')return'Pelaksanaan · Donasi Ditutup';
+  if(status==='PENDING_REVIEW')return'Menunggu Review';
+  if(status==='APPROVED')return'Siap Dipublikasikan';
+  if(status==='DRAFT'||status==='REJECTED')return'Draft / Penyusunan';
+  if(status==='ACTIVE'&&pct>=100)return'Target Tercapai · Donasi Masih Terbuka';
+  if(status==='ACTIVE')return'Penggalangan Aktif';
+  return status||'Program';
+}
+function renderProgramProgressV0516(item,id){
+  if(item.querySelector('[data-program-progress-v0516]'))return;
+  const d=programProgressDataV0516(id);if(!d)return;
+  const top=item.querySelector('.program-item__top');if(!top)return;
+  const stage=stageLabelV0516(d.status,d.pct);
+  const box=document.createElement('div');
+  box.className='program-progress-v0516';
+  box.dataset.programProgressV0516='1';
+  box.innerHTML=`
+    <div class="program-progress-head-v0516">
+      <div class="program-progress-money-v0516">
+        <span>Terkumpul</span>
+        <strong>${idr(d.credited)} <small style="font:inherit;color:var(--muted);font-size:8px">/ ${idr(d.target)}</small></strong>
+      </div>
+      <div class="program-progress-percent-v0516">
+        <strong>${d.pct}%</strong>
+        <small>progress dana</small>
+      </div>
+    </div>
+    <div class="program-progress-bar-v0516"><i style="width:${d.pct}%"></i></div>
+    <div class="program-progress-foot-v0516">
+      <span class="program-stage-v0516">${esc(stage)}</span>
+      ${d.excess>0?`<span class="excess">Dana Lebih ${idr(d.excess)}</span>`:`<span>Sisa target ${idr(Math.max(0,d.target-d.credited))}</span>`}
+    </div>`;
+  const actions=item.querySelector('.program-actions');
+  item.insertBefore(box,actions||null);
+}
+
 function enhanceProgramRows(){
   const root=$('[data-program-list]');if(!root)return;
 
@@ -94,17 +179,19 @@ function enhanceProgramRows(){
           statusText=item.querySelector('.status-pill')?.textContent.trim()||'',
           meta=item.querySelector('.muted.mini');
 
+    renderProgramProgressV0516(item,id);
+
     if(meta&&!item.querySelector('[data-lifecycle-note-v0515]')){
       const note=document.createElement('div');
       note.className='program-lifecycle-note-v0515';
       note.dataset.lifecycleNoteV0515='1';
 
       if(/Aktif/i.test(statusText)){
-        note.innerHTML='<strong>Donasi terbuka.</strong> Jika target sudah tercapai, donasi berikutnya tetap tercatat sebagai Dana Lebih sampai Anda memilih <strong>Stop Donasi</strong>.';
+        note.innerHTML='<strong>Donasi terbuka.</strong> Setelah target tercapai, donasi berikutnya masuk Dana Lebih sampai Stop Donasi.';
       }else if(/Dijeda/i.test(statusText)){
-        note.innerHTML='<strong>Donasi ditutup.</strong> Dana lama tetap tercatat. Lanjutkan update perkembangan sampai pekerjaan benar-benar selesai.';
+        note.innerHTML='<strong>Donasi ditutup.</strong> Dana lama tetap tercatat; lanjutkan update perkembangan.';
       }else if(/Selesai/i.test(statusText)){
-        note.innerHTML='<strong>Program selesai.</strong> Donasi baru ditutup permanen; riwayat donasi dan perkembangan tetap tersedia.';
+        note.innerHTML='<strong>Program selesai.</strong> Donasi baru ditutup; riwayat tetap tersedia.';
       }else{
         note.textContent='Program mengikuti alur review KIA sebelum menerima donasi publik.';
       }

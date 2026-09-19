@@ -1,6 +1,22 @@
 [
   {
     "version": "0.5.10",
+    "build": 516,
+    "date": "2026-09-19",
+    "title": "Program Progress Compact",
+    "new": [
+      "Card Program Saya menampilkan Terkumpul, Target, persentase progress, progress bar, sisa target atau Dana Lebih",
+      "Card menampilkan tahap program seperti Penggalangan Aktif, Target Tercapai, Pelaksanaan/Donasi Ditutup, atau Selesai"
+    ],
+    "improvements": [
+      "Card Program Saya dipadatkan agar lebih mudah dipindai ketika penggalang memiliki banyak program",
+      "Thumbnail, tombol, lifecycle note, dan spacing diperkecil tanpa mengubah alur Build 515"
+    ],
+    "fixes": [],
+    "security": []
+  },
+  {
+    "version": "0.5.10",
     "build": 515,
     "date": "2026-09-19",
     "title": "Program Lifecycle",

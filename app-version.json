@@ -1,8 +1,8 @@
 {
   "version": "0.5.10",
-  "build": 515,
+  "build": 516,
   "released_at": "2026-09-19",
   "required_update": false,
   "minimum_supported_version": "0.5.0",
-  "summary": "Program Lifecycle: safe stop/resume donation controls, explicit program completion, public closed-state UI, and server checkout guard while preserving Build 514 stability."
+  "summary": "Program Progress Compact: Program Saya now shows fundraising progress, target, percentage, remaining target/Dana Lebih, and lifecycle stage in a more compact card without changing dashboard boot or backend."
 }
